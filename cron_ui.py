@@ -33,6 +33,16 @@ TASKS_FILE_PATH = os.path.join(SCRIPT_DIR, TASKS_FILE_NAME)
 
 
 
+def calculate_next_run(cron_str):
+    """Calculates the next run time from a CRON string."""
+    if not cron_str:
+        return ""
+    try:
+        now = datetime.now()
+        iter = croniter(cron_str, now)
+        return iter.get_next(datetime).strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        return "Invalid CRON"
 
 def load_tasks():
     """Loads tasks from TASKS_FILE_PATH or initializes with defaults."""
@@ -336,16 +346,6 @@ def show_main_page_alert(alert_data):
 
 #######################################################################################
 # --- Helper Functions ---------------------------------------------------------------
-def calculate_next_run(cron_str):
-    """Calculates the next run time from a CRON string."""
-    if not cron_str:
-        return ""
-    try:
-        now = datetime.now()
-        iter = croniter(cron_str, now)
-        return iter.get_next(datetime).strftime('%Y-%m-%d %H:%M')
-    except Exception:
-        return "Invalid CRON"
 
 def save_tasks_to_file():
     """Saves the current tasks_data to TASKS_FILE_PATH."""
@@ -502,6 +502,6 @@ def os_get_process_usage_subprocess(pid):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=9721)
+    app.run_server(debug=True,port=9721)
 
 
