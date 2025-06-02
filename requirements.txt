@@ -84,10 +84,6 @@ bs4
 htmldate
 
 
-### issue with llama index, same than llama
-pydantic==2.8.2
-
-
 
 
 
