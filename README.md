@@ -9,6 +9,8 @@ A quick but working for local laptop Task Scheduler
     cd cron_ui
     ```
 
+
+
 2.  **Install dependencies:**
     ```bash
     pip install -r requirements.txt
