@@ -1,23 +1,26 @@
 [
-  {
-    "id": "b8544f37-0965-433d-83b8-ca8cf7c1838b",
-    "name": "task3",
-    "bash_script_path": "runtest.sh",
-    "cron_expression": "0 1 * * *",
-    "next_run_time": "2025-06-01 01:00"
-  },
-  {
-    "id": "20250531-232419",
-    "name": "task4",
-    "bash_script_path": "runtest.sh",
-    "cron_expression": "0 1 * * *",
-    "next_run_time": "2025-06-01 01:00"
-  },
-  {
-    "id": "20250531-235857",
-    "name": "task6",
-    "bash_script_path": "runtest.sh",
-    "cron_expression": "0 2 * * *",
-    "next_run_time": "2025-06-01 02:00"
-  }
+    {
+        "id": "b8544f37-0965-433d-83b8-ca8cf7c1838b",
+        "name": "task3",
+        "bash_script_path": "runtest.sh",
+        "cron_expression": "0 1 * * *",
+        "next_run_time": "2025-06-03 01:00",
+        "status_last_run": "Started 'runtest.sh' (PID: 30375). Usage: Process completed or info unavailable. (Initiated: 2025-06-02 11:18:40)"
+    },
+    {
+        "id": "20250531-232419",
+        "name": "task4",
+        "bash_script_path": "runtest.sh",
+        "cron_expression": "0 1 * * *",
+        "next_run_time": "2025-06-03 01:00",
+        "status_last_run": "Not yet run"
+    },
+    {
+        "id": "20250531-235857",
+        "name": "task6",
+        "bash_script_path": "runtest.sh",
+        "cron_expression": "0 2 * * *",
+        "next_run_time": "2025-06-03 02:00",
+        "status_last_run": "Not yet run"
+    }
 ]
