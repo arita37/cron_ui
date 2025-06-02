@@ -485,10 +485,12 @@ def run_shell_script(script_path):
     cmd = f"{script_path}"
     
     try:
+        # Use system default shell, fallback to /bin/sh
+        default_shell = os.environ.get('SHELL', '/bin/sh')
         process = subprocess.Popen(
             cmd,
             shell=True,
-            executable="/bin/zsh", # Consider making this configurable or detecting default shell
+            executable=default_shell,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
