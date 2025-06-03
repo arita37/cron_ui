@@ -152,51 +152,51 @@ jobs:
 # return result.data.number;
 
 
-  ############################################## 
-  create-pull-request2:
-   needs : [build] # List of dependent Jobs
-   if: success()   # check if all previous (needs) dependent jobs were successfull  then only execute
-   runs-on: ubuntu-latest
-   permissions: write-all
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v3
-       with:
-         fetch-depth: 0
+  # ############################################## 
+  # create-pull-request2:
+  #  needs : [build] # List of dependent Jobs
+  #  if: success()   # check if all previous (needs) dependent jobs were successfull  then only execute
+  #  runs-on: ubuntu-latest
+  #  permissions: write-all
+  #  steps:
+  #    - name: Checkout
+  #      uses: actions/checkout@v3
+  #      with:
+  #        fetch-depth: 0
 
-     - name: Get BASE_BRANCH
-       shell: bash
-       run: |
-         # If you want to figure it out dynamically
-         echo "BASE_BRANCH=$( echo 'zdocs_y23487teg65f6')" >> $GITHUB_ENV
+  #    - name: Get BASE_BRANCH
+  #      shell: bash
+  #      run: |
+  #        # If you want to figure it out dynamically
+  #        echo "BASE_BRANCH=$( echo 'zdocs_y23487teg65f6')" >> $GITHUB_ENV
 
-     - name: Create PR   zdocs_y23487teg65f6
-       continue-on-error: true     
-       id: create_pr
-       uses: actions/github-script@v6
-       env:
-         BASE_BRANCH: ${{ env.BASE_BRANCH }}
-       with:
-         script: |
-           const { repo, owner } = context.repo;
-           const {BASE_BRANCH} = process.env;
-           const result = await github.rest.pulls.create({
-             title: `Auto PR ${{ github.ref_name }} into ${ BASE_BRANCH }`,
-             owner,
-             repo,
-             head: '${{ github.ref_name }}',
-             base: `${BASE_BRANCH}`,
-             body: [
-               'PR is auto-generated after sucessfull process.,',
-               'Uses : [actions/github-script](https://github.com/actions/github-script).'
-             ].join('\n')
-           });
-           await github.rest.issues.addLabels({
-             owner,
-             repo,
-             issue_number: result.data.number,
-             labels: ['Auto-PR']
-           });
+  #    - name: Create PR   zdocs_y23487teg65f6
+  #      continue-on-error: true     
+  #      id: create_pr
+  #      uses: actions/github-script@v6
+  #      env:
+  #        BASE_BRANCH: ${{ env.BASE_BRANCH }}
+  #      with:
+  #        script: |
+  #          const { repo, owner } = context.repo;
+  #          const {BASE_BRANCH} = process.env;
+  #          const result = await github.rest.pulls.create({
+  #            title: `Auto PR ${{ github.ref_name }} into ${ BASE_BRANCH }`,
+  #            owner,
+  #            repo,
+  #            head: '${{ github.ref_name }}',
+  #            base: `${BASE_BRANCH}`,
+  #            body: [
+  #              'PR is auto-generated after sucessfull process.,',
+  #              'Uses : [actions/github-script](https://github.com/actions/github-script).'
+  #            ].join('\n')
+  #          });
+  #          await github.rest.issues.addLabels({
+  #            owner,
+  #            repo,
+  #            issue_number: result.data.number,
+  #            labels: ['Auto-PR']
+  #          });
 
 
 # await github.rest.pulls.merge({
