@@ -457,6 +457,30 @@ def run_task(task):
    return alert_dict
 
 
+def date_get_ymdhms(dt=None):
+    """
+    Get year, month, day, hour, minute, second from a datetime object.
+    If no datetime is provided, uses the current datetime.
+    
+    Returns:
+        tuple: (year, month, day, hour, minute, second)
+    """
+    from datetime import datetime
+    
+    # If no datetime provided, use current datetime
+    if dt is None:
+        dt = datetime.now()
+    
+    # Extract components
+    year = dt.year
+    month = dt.month
+    day = dt.day
+    hour = dt.hour
+    minute = dt.minute
+    second = dt.second
+    
+    return year, month, day, hour, minute, second
+
 def run_shell_script(script_path):
     """
     Run a shell script after loading .zshrc.
@@ -482,8 +506,22 @@ def run_shell_script(script_path):
             print(f"Could not make script executable {script_path}: {e}")
             raise PermissionError(f"Script not executable and could not be made executable: {script_path}")
 
-    cmd = f"{script_path}"
-    
+
+    #### create some logfile
+    dircurr = os.path.abspath(os.getcwd())
+    year, month, day, hour, minute, second = date_get_ymdhms()
+    dirlog=f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}"
+    logfile=f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
+
+    os.makedirs(f"{dirlog}", exist_ok=True)
+    os.system(f"echo 'script: {script_path}' > {logfile}")
+    os.system(f"echo 'date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' >> {logfile}")
+    os.system(f"echo '\n\n\n' >> {logfile}")
+
+    cmd = f"{script_path} 2>&1 | tee -a " + logfile
+    print(f"Running: {cmd}")
+
+
     try:
         # Use system default shell, fallback to /binz/sh
         default_shell = os.environ.get('SHELL', '/bin/zsh')
@@ -497,6 +535,7 @@ def run_shell_script(script_path):
             close_fds=True # Recommended for security and resource management
         )
         
+
         # Brief wait to allow process to start and potentially get initial info
         # Note: This does NOT wait for the script to complete.
         time.sleep(0.5) 
