@@ -188,7 +188,7 @@ def create_main_page_layout():
 
     return dbc.Container([
         dbc.Row(dbc.Col(dbc.Alert(id='main-page-alert', is_open=False, duration=15000), width=12), className="mt-3"),
-        dbc.Row(dbc.Col(html.H1("Task List"), width=True), className="my-4"),
+        dbc.Row(dbc.Col(html.H5("Task List"), width=True), className="my-4"),
         dbc.Row(dbc.Col(dbc.Button("Add New Task", id="add-task-button-main", href="/manage-task", color="primary"), width="auto"), className="mb-3"),
         dbc.Row(dbc.Col(task_table if tasks_data else html.P("No tasks found. Add one or check 'tasks.json'!"))),
         
@@ -196,7 +196,7 @@ def create_main_page_layout():
         html.Hr(className="my-4"), # Visual separator
         dbc.Row(
             dbc.Col([
-                html.H4("Current User Crontab"),
+                html.H5("Current User Crontab"),
                 html.Pre(
                     children=crontab_content_str,
                     id='crontab-display',
