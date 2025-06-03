@@ -1,4 +1,4 @@
-name: AA__main_Build and Publish Package PyPI
+name: release_pypi_main
 
 ###  https://github.com/arita37/awesome-actions#static-analysis
 
@@ -6,16 +6,16 @@ on:
   workflow_dispatch:
     inputs:
 
-  push:
-    branches:
-    - main
+  # push:
+  #   branches:
+  #   - main
 
 #  pull_request:
 #    branches:
 #    - main
 
 concurrency:
-  group: ${{ github.ref }}
+  group: ${{ github.ref }}_releese
   cancel-in-progress: true
 
 
@@ -108,81 +108,6 @@ jobs:
       continue-on-error: true
       run: |
           python utilmy/cli.py help
-
-
-
-
-    #- name:  sspark/src/util_spark.py
-    #  # continue-on-error: true
-    #  run: |
-    #      python utilmy/sspark/src/util_spark.py test_all
-
-
-
-    - name: test_images
-      continue-on-error: true
-      run: |
-          python test.py test_images
-
-    - name: test_deeplearning
-      continue-on-error: true
-      run: |
-          python test.py test_deeplearning_torch
-
-    - name: test_recsys
-      continue-on-error: true
-      run:  python test.py   test_recsys
-
-    - name: test_ppandas
-      run: python test.py test_ppandas
-
-
-    - name: test_docs_cli
-      run: python test.py test_docs_cli
-
-    - name: test_nlp
-      run: python test.py test_nlp
-
-    - name: test_distributed
-      continue-on-error: true
-      run: ls .
-      # python test.py test_distributed
-
-
-
-    - name: test_oos
-      run: python test.py test_oos
-
-    - name: test_utils
-      run: python test.py test_utils
-
-    - name: test_tabular
-      run: python test.py test_tabular
-
-    - name: test_adatasets
-      run: python test.py test_adatasets
-
-    - name: test_nnumpy
-      run: python test.py test_nnumpy
-
-    - name: test_dates
-      run: python test.py test_dates
-
-    - name: test_decorators
-      run: python test.py test_decorators
-
-    - name: test_utilmy
-      run: python test.py test_utilmy
-
-    #- name: test_viz_vizhtml
-    #  run:  python test.py   test_viz_vizhtml
-
-    - name: test_parallel
-      run:  python test.py   test_parallel
-
-
-
-
 
 
 
