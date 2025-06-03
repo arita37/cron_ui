@@ -5,7 +5,7 @@ from dash.exceptions import PreventUpdate
 from datetime import datetime
 import uuid
 from croniter import croniter
-from crontab import CronTab
+from crontab import CronTab # Ensure this is imported at the top level
 import json
 import os, traceback
 import time # For a slight delay to help with ID uniqueness if needed
@@ -67,7 +67,7 @@ script_content_textarea = dbc.Textarea(
     [Input('task-script-input', 'value')],
     prevent_initial_call=True
 )
-def load_script_content(script_path):
+def load_script_content_callback(script_path): # Renamed to avoid conflict with function name
     if not script_path:
         return ""
     return read_script_content(script_path)
@@ -135,6 +135,16 @@ def load_tasks():
 load_tasks()
 
 
+##########################################################################################################
+# --- Helper function to get crontab content ---
+def get_user_crontab_content():
+    """Fetches the current user's crontab content as a string."""
+    try:
+        user_cron = CronTab(user=True)
+        return user_cron.render()
+    except Exception as e:
+        print(f"Error reading user crontab: {e}")
+        return f"# Could not retrieve crontab.\n# Error: {str(e)}"
 
 ##########################################################################################################
 # --- Page Layouts ---
@@ -170,35 +180,59 @@ def create_main_page_layout():
     task_table = dbc.Table([html.Thead(header_row), html.Tbody(table_rows)],
                            bordered=True, striped=True, hover=True, responsive=True)
 
+    # --- ADDITION: Fetch crontab content ---
+    crontab_content_str = get_user_crontab_content()
+    if not crontab_content_str.strip():
+        crontab_content_str = "# No crontab entries found for the current user or crontab is empty."
+    # --- END ADDITION ---
+
     return dbc.Container([
         dbc.Row(dbc.Col(dbc.Alert(id='main-page-alert', is_open=False, duration=15000), width=12), className="mt-3"),
         dbc.Row(dbc.Col(html.H1("Task List"), width=True), className="my-4"),
         dbc.Row(dbc.Col(dbc.Button("Add New Task", id="add-task-button-main", href="/manage-task", color="primary"), width="auto"), className="mb-3"),
-        dbc.Row(dbc.Col(task_table if tasks_data else html.P("No tasks found. Add one or check 'tasks.json'!")))
+        dbc.Row(dbc.Col(task_table if tasks_data else html.P("No tasks found. Add one or check 'tasks.json'!"))),
+        
+        # --- ADDITION: Display Crontab Content ---
+        html.Hr(className="my-4"), # Visual separator
+        dbc.Row(
+            dbc.Col([
+                html.H4("Current User Crontab"),
+                html.Pre(
+                    children=crontab_content_str,
+                    id='crontab-display',
+                    style={
+                        'border': '1px solid #ddd',
+                        'padding': '10px',
+                        'maxHeight': '300px',
+                        'overflowY': 'auto',
+                        'whiteSpace': 'pre-wrap', # Ensures lines wrap and are treated as preformatted
+                        'wordBreak': 'break-all', # Breaks long lines if necessary
+                        'background': '#f8f9fa' # Light background for readability
+                    }
+                )
+            ]),
+            className="mb-4" # Add some margin at the bottom
+        )
+        # --- END ADDITION ---
     ], fluid=True)
 
 
 def create_manage_task_layout(task_info=None, mode='add'):
     """Creates the layout for Add/Edit/Copy Task page."""
-    # task_info could be the task to edit or task to copy
-    # mode can be 'add', 'edit', 'copy'
-    
     initial_name = task_info['name'] if task_info else ""
     initial_script_path = task_info['bash_script_path'] if task_info else ""
     initial_cron = task_info['cron_expression'] if task_info else ""
     editing_id = task_info['id'] if task_info and mode == 'edit' else None
 
-    # --- MODIFICATION: Read initial script content ---
     initial_script_content = ""
-    if initial_script_path: # If there's a script path (e.g., in edit/copy mode)
+    if initial_script_path: 
         initial_script_content = read_script_content(initial_script_path)
-    # --- END MODIFICATION ---
 
     if mode == 'edit':
         page_title = "Edit Task"
     elif mode == 'copy':
         page_title = "Copy Task (will be saved as new)"
-    else: # mode == 'add'
+    else: 
         page_title = "Add New Task"
         
     return dbc.Container([
@@ -217,23 +251,18 @@ def create_manage_task_layout(task_info=None, mode='add'):
                 dbc.Label("CRON Expression", html_for="task-cron-input", width=2),
                 dbc.Col(dbc.Input(type="text", id="task-cron-input", value=initial_cron, placeholder="e.g., 0 0 * * * (leave blank if none)"), width=10),
             ], className="mb-3"),
-        
-            # --- MODIFIED SECTION for Script Content Textarea ---
-            # This section was present in your provided code with an incorrect label and missing value.
-            # It's now corrected and integrated.
             dbc.Row([
-                dbc.Label("Script Content", html_for="task-script-content", width=2), # Corrected label
-                dbc.Col([ # Textarea as a child of the Col
+                dbc.Label("Script Content", html_for="task-script-content", width=2), 
+                dbc.Col([ 
                     dbc.Textarea(
                         id='task-script-content',
-                        value=initial_script_content, # Set initial value
+                        value=initial_script_content, 
                         placeholder="Enter or edit script content here. Content will be loaded if 'Bash Script Path' is valid and file exists. Changes will be saved to the path.",
                         style={"height": "300px"},
                     )
-                ], width=10) # Added width for consistency
-            ], className="mb-3"), # Added className to Row for consistency
-            # --- END MODIFIED SECTION ---
-        ]), # Closing dbc.Form
+                ], width=10) 
+            ], className="mb-3"),
+        ]), 
         html.Div([
             dbc.Button("Save Task", id="save-task-button", color="success", className="me-2"),
             dbc.Button("Cancel", id="cancel-manage-task-button", href="/", color="secondary", outline=True),
@@ -258,9 +287,9 @@ app.layout = html.Div([
 def display_page(pathname, search_query):
     """Renders page content based on URL."""
     global tasks_data 
-    if pathname == '/manage-task': # Unified page for add, edit, copy
+    if pathname == '/manage-task': 
         task_info = None
-        mode = 'add' # Default mode
+        mode = 'add' 
         if search_query: 
             params = dict(x.split('=') for x in search_query.strip('?').split('&') if '=' in x)
             edit_id = params.get('edit_id')
@@ -268,10 +297,10 @@ def display_page(pathname, search_query):
 
             if edit_id:
                 task_info = next((task for task in tasks_data if task.get('id') == edit_id), None)
-                mode = 'edit' if task_info else 'add' # Fallback to add if ID not found
+                mode = 'edit' if task_info else 'add' 
             elif copy_id:
                 task_info = next((task for task in tasks_data if task.get('id') == copy_id), None)
-                mode = 'copy' if task_info else 'add' # Fallback to add if ID not found
+                mode = 'copy' if task_info else 'add' 
         
         return create_manage_task_layout(task_info=task_info, mode=mode)
     return create_main_page_layout()
@@ -282,15 +311,12 @@ def display_page(pathname, search_query):
     [Input('save-task-button', 'n_clicks')],
     [State('task-name-input', 'value'),
      State('task-script-input', 'value'),
-     State('task-script-content', 'value'),  # State for script content (already present)
+     State('task-script-content', 'value'), 
      State('task-cron-input', 'value'),
-     State('edit-mode-store', 'data')], # Contains editing_id and mode
+     State('edit-mode-store', 'data')], 
     prevent_initial_call=True
 )
-# --- MODIFICATION: Added 'script_content' to function parameters ---
 def save_task_callback(n_clicks, name, script_path, script_content, cron_expression, edit_mode_data):
-# --- END MODIFICATION ---
-    """Saves a new task or updates an existing task."""
     global tasks_data
     if not n_clicks:
         raise PreventUpdate
@@ -303,19 +329,18 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
     next_run = calculate_next_run(cron_expression)
     alert_message = ""
 
-    if editing_id: # This is an update (edit) operation
+    if editing_id: 
         task_to_update = next((task for task in tasks_data if task.get('id') == editing_id), None)
         if task_to_update:
             task_to_update['name'] = name
             task_to_update['bash_script_path'] = script_path
             task_to_update['cron_expression'] = cron_expression if cron_expression else ""
             task_to_update['next_run_time'] = next_run
-            # status_last_run is not modified here, only on actual run
             alert_message = f"Task '{name}' (ID: {editing_id}) updated successfully!"
             task_add_cron(task_to_update)
-        else: # Should not happen if flow is correct
+        else: 
             return dash.no_update, {'message': f"Error: Task with ID {editing_id} not found for update.", 'color': 'danger'}
-    else: # This is a new task (either fresh add or from copy)
+    else: 
         base_id = datetime.now().strftime('%Y%m%d-%H%M%S')
         new_task_id = base_id
         counter = 1
@@ -330,20 +355,16 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
             'id': new_task_id, 'name': name, 'bash_script_path': script_path,
             'cron_expression': cron_expression if cron_expression else "", 
             'next_run_time': next_run,
-            'status_last_run': 'Not yet run' # Initialize for new task
+            'status_last_run': 'Not yet run' 
         }
         tasks_data.append(new_task)
         alert_message = f"Task '{name}' (ID: {new_task_id}) saved successfully!"
         task_add_cron(new_task)
 
-
-    # Save script content to file (this part was already in your provided code)
-    # Now 'script_content' parameter is correctly passed to this function.
-    if script_content is not None: # script_content is now a defined parameter
+    if script_content is not None: 
         save_result = save_script_content(script_path, script_content)
         if not save_result:
             return dash.no_update, {'message': f'Error saving script to {script_path}. Task not saved/updated.', 'color': 'danger'}
-
         
     save_tasks_to_file() 
     return '/', {'message': alert_message, 'color': 'success'}
@@ -360,18 +381,13 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
     prevent_initial_call=True
 )
 def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, delete_n_clicks):
-    """Handles Run, Edit, Copy, Delete actions for tasks."""
     global tasks_data
     ctx = callback_context
     if not ctx.triggered or not ctx.triggered_id:
         raise PreventUpdate
 
-    # Ensure triggered_id is a dictionary (pattern-matching callbacks)
     triggered_prop_id = ctx.triggered[0]['prop_id']
-    # prop_id is like '{"index":"task_id_1","type":"run-task"}.n_clicks'
-    # We need to parse the JSON part to get the 'index' and 'type'
     try:
-        # Extract the JSON string part: '{"index":"task_id_1","type":"run-task"}'
         json_str = triggered_prop_id.split('.')[0]
         button_id_dict = json.loads(json_str)
     except Exception as e:
@@ -389,8 +405,8 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
     alert_data = {'message': '', 'color': 'info'}
 
     if action_type == 'run-task':
-        alert_data = run_task(task) # run_task will now update task's status_last_run and save
-        return '/', '', alert_data # Redirect to main page to refresh and show new status
+        alert_data = run_task(task) 
+        return '/', '', alert_data 
     
     elif action_type == 'edit-task':
         return '/manage-task', f'?edit_id={task_id}', {'message': f"Editing task: {task.get('name')}", 'color': 'info'}
@@ -400,12 +416,11 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
 
     elif action_type == 'delete-task':
         task_name_deleted = task.get('name', 'Unknown task')
-        # Also remove from crontab if it exists
-        task_remove_cron(task, show=0) # show=0 to make it less verbose if not needed
+        task_remove_cron(task, show=0) 
         tasks_data = [t for t in tasks_data if t.get('id') != task_id]
         save_tasks_to_file() 
         alert_data = {'message': f"Task '{task_name_deleted}' deleted.", 'color': 'warning'}
-        return '/', '', alert_data # Redirect to main page to refresh
+        return '/', '', alert_data 
 
     raise PreventUpdate
 
@@ -417,7 +432,6 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
     [Input('alert-message-store', 'data')]
 )
 def show_main_page_alert(alert_data):
-    """Displays alerts on the main page based on data from alert-message-store."""
     if alert_data and alert_data.get('message'):
         return alert_data['message'], True, alert_data['color']
     return "", False, "info"
@@ -427,10 +441,8 @@ def show_main_page_alert(alert_data):
 # --- Helper Functions ---------------------------------------------------------------
 
 def save_tasks_to_file():
-    """Saves the current tasks_data to TASKS_FILE_PATH."""
     global tasks_data
     try:
-        # Ensure all tasks have the new field before saving, just in case
         for task_entry in tasks_data:
             task_entry.setdefault('status_last_run', 'Not yet run')
         with open(TASKS_FILE_PATH, 'w') as f:
@@ -442,25 +454,22 @@ def save_tasks_to_file():
 
 #######################################################################################
 def task_add_cron(task):
-    from crontab import CronTab
+    # from crontab import CronTab # Already imported globally
 
     cron = CronTab(user=True)
     cmd = task.get('bash_script_path', "")
     taskid = task.get('id', "-1")
     schedule = task.get('cron_expression', "")
 
-    # Remove existing job with the same comment before adding/updating
-    # This handles updates to schedule or command for an existing task ID
-    # Iterate over jobs and remove if comment matches 'cron_ui' + taskid
     for job in cron.find_comment('cron_ui' + taskid):
         cron.remove(job)
     
-    if not schedule: # If cron_expression is empty, don't add to crontab
+    if not schedule: 
         print(f"Task '{task.get('name')}' (ID: {taskid}) has no CRON expression. Not adding to system crontab.")
-        cron.write() # Save changes if any (like removals)
+        cron.write() 
         return
 
-    if len(cmd) < 1: # Basic check for command
+    if len(cmd) < 1: 
         print(f"Invalid command for task ID {taskid}. Not adding to system crontab.")
         cron.write()
         return
@@ -477,13 +486,13 @@ def task_add_cron(task):
 
     job = cron.new(command=cmd, comment='cron_ui' + taskid)
     job.setall(schedule)
-    cron.write() # Use write_safe to avoid issues with temp files
+    cron.write() 
     print(f"Cron job for task ID {taskid} set/updated: {job}")
 
 
 
 def task_remove_cron(task, show=1):
-    from crontab import CronTab
+    # from crontab import CronTab # Already imported globally
     cron = CronTab(user=True)
     taskid = task.get('id')
     jobs_removed = 0
@@ -502,7 +511,6 @@ def task_remove_cron(task, show=1):
 
 #######################################################################################
 def run_task(task):
-   """Runs the task script and updates its status."""
    script_path = task.get('bash_script_path')
    task_name   = task.get('name', 'Unnamed Task')
    
@@ -513,11 +521,10 @@ def run_task(task):
    run_color = "info"
 
    try:
-       # run_shell_script now returns a more detailed message
        execution_summary = run_shell_script(script_path, task) 
        run_message = f"Task '{task_name}': {execution_summary}"
        task['status_last_run'] = f"{execution_summary} (Initiated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
-       run_color = "success" if "Started" in execution_summary else "warning" # Basic check
+       run_color = "success" if "Started" in execution_summary or "completed quickly" in execution_summary else "warning" 
 
    except FileNotFoundError:
        run_message = f"Error running task '{task_name}': Script '{script_path}' not found."
@@ -534,27 +541,17 @@ def run_task(task):
        print(f"Exception in run_task: {e}")
        print(traceback.format_exc())
 
-   save_tasks_to_file() # Persist the updated status_last_run
+   save_tasks_to_file() 
 
    alert_dict = {'message': run_message, 'color': run_color}
    return alert_dict
 
 
 def date_get_ymdhms(dt=None):
-    """
-    Get year, month, day, hour, minute, second from a datetime object.
-    If no datetime is provided, uses the current datetime.
-    
-    Returns:
-        tuple: (year, month, day, hour, minute, second)
-    """
     from datetime import datetime
-    
-    # If no datetime provided, use current datetime
     if dt is None:
         dt = datetime.now()
     
-    # Extract components and format with 2 digits
     year = str(dt.year)
     month = f"{dt.month:02d}"
     day = f"{dt.day:02d}"
@@ -565,16 +562,6 @@ def date_get_ymdhms(dt=None):
     return year, month, day, hour, minute, second
 
 def run_shell_script(script_path, task):
-    """
-    Run a shell script after loading .zshrc.
-    Args:
-        script_path (str): Path to the shell script to execute.
-    Returns:
-        str: A message indicating the outcome of the script initiation.
-    Raises:
-        FileNotFoundError: If the script_path does not exist.
-        PermissionError: If the script is not executable.
-    """
     import subprocess
     import os    
     
@@ -583,7 +570,7 @@ def run_shell_script(script_path, task):
     
     if not os.access(script_path, os.X_OK):
         try:
-            os.chmod(script_path, 0o755) # Try to make it executable
+            os.chmod(script_path, 0o755) 
             print(f"Made script executable: {script_path}")
         except Exception as e:
             print(f"Could not make script executable {script_path}: {e}")
@@ -591,7 +578,6 @@ def run_shell_script(script_path, task):
 
     task_str = str(task)
 
-    #### create some logfile #############################
     dircurr = os.path.abspath(os.getcwd())
     print(dircurr)
     year, month, day, hour, minute, second = date_get_ymdhms()
@@ -604,15 +590,10 @@ def run_shell_script(script_path, task):
     os.system(f"echo '## task: {task_str}' >> {logfile}")
     os.system(f"echo '\n\n\n' >> {logfile}")
 
-
-
-    #### Command to run ################################### {script_path}
     cmd = f"cd '{dircurr}' 2>&1 | tee -a  '{logfile}'  && echo $(pwd) 2>&1 | tee -a  '{logfile}'  &&  {script_path} 2>&1 | tee -a  '{logfile}' "
     print(f"Running: {cmd}")
 
-
     try:
-        # Use system default shell, fallback to /binz/sh
         default_shell = os.environ.get('SHELL', '/bin/zsh')
         print(f"Using shell: {default_shell}")
         process = subprocess.Popen(
@@ -622,53 +603,37 @@ def run_shell_script(script_path, task):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            # close_fds=True # Recommended for security and resource management
         )
         
-
-
-        # Brief wait to allow process to start and potentially get initial info
-        # Note: This does NOT wait for the script to complete.
         time.sleep(0.5) 
 
         pid = process.pid
-        # Check if process is still running; it might finish very quickly
         try:
-            # psutil would be more robust here if available
-            # For now, a simple check or rely on Popen not erroring immediately
-            os.kill(pid, 0) # Check if process exists
+            os.kill(pid, 0) 
             is_running = True
         except OSError:
             is_running = False
         
         if is_running:
-            # Attempt to get usage info; might fail if script is too short-lived
-            # or if ps command structure isn't quite right for all systems/outputs
             try:
                 info = os_get_process_usage_subprocess(pid)
-                if not info or f"{pid}" not in info: # If ps didn't find the pid
+                if not info or f"{pid}" not in info: 
                     info = "Process completed or info unavailable."
             except Exception as e_info:
                 info = f"Could not get process info: {e_info}"
             return f"Started '{os.path.basename(script_path)}' (PID: {pid}). Usage: {info.strip()}"
         else:
-            # If not running, try to get return code
-            # Note: communicate() will wait for completion if called here
-            stdout, stderr = process.communicate(timeout=2) # Small timeout
+            stdout, stderr = process.communicate(timeout=2) 
             if process.returncode == 0:
                 return f"Script '{os.path.basename(script_path)}' (PID: {pid}) likely completed quickly. Output: {stdout[:100]}"
             else:
                 return f"Script '{os.path.basename(script_path)}' (PID: {pid}) may have failed quickly. Error: {stderr[:100]}"
-
 
     except Exception as e:
         return f"Failed to start script '{os.path.basename(script_path)}': {str(e)}"
 
 
 def os_get_process_info(pid):
-    """
-    Get detailed information about a specific process ID
-    """
     import subprocess
     cmd = f"ps -fp {pid}"
     try:
@@ -679,9 +644,6 @@ def os_get_process_info(pid):
 
 
 def os_get_process_usage_subprocess(pid):
-    """
-    Get RAM and CPU usage using subprocess commands
-    """
     import subprocess    
     cmd = f"ps -p {pid} -o pid,pcpu,pmem,rss,cmd --no-headers"
     try:

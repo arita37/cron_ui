@@ -5,7 +5,7 @@
         "bash_script_path": "./runtest.sh",
         "cron_expression": "0 1 * * *",
         "next_run_time": "2025-06-04 01:00",
-        "status_last_run": "Started 'runtest.sh' (PID: 90513). Usage: Process completed or info unavailable. (Initiated: 2025-06-04 00:10:41)"
+        "status_last_run": "Started 'runtest.sh' (PID: 90978). Usage: Process completed or info unavailable. (Initiated: 2025-06-04 00:24:51)"
     },
     {
         "id": "20250531-232419",
@@ -14,14 +14,6 @@
         "cron_expression": "0 1 * * *",
         "next_run_time": "2025-06-04 01:00",
         "status_last_run": "Started 'runtest.sh' (PID: 79944). Usage: Process completed or info unavailable. (Initiated: 2025-06-03 20:28:44)"
-    },
-    {
-        "id": "20250531-235857",
-        "name": "task6",
-        "bash_script_path": "./runtest.sh",
-        "cron_expression": "0 2 * * *",
-        "next_run_time": "2025-06-04 02:00",
-        "status_last_run": "Failed to start: math.log requires 1 to 2 arguments (At: 2025-06-03 22:10:04)"
     },
     {
         "id": "20250604-001040",
