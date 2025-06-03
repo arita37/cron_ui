@@ -1,0 +1,206 @@
+name: Auto docstring - Create zdocstring branch 
+
+###  https://github.com/arita37/awesome-actions#static-analysis
+
+on:
+  workflow_dispatch:
+    inputs:  
+      
+  push:
+    branches:
+    - z_docstring_create
+
+
+#  schedule:
+#    - cron:  '0 2 * * *'      #### 60mins
+    #    - cron:  '*/10 * * * *'
+
+
+#  pull_request:
+#    branches:
+#    - main
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    #- uses: actions/checkout@v1
+    #  ref: ${{ github.head_ref }
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
+
+
+
+    - name: Set up Python 3.8.*
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8.*
+      
+    - name: Install pipenv
+      uses: dschep/install-pipenv-action@v1
+      
+  
+    - name: Cache pipenv virtualenv
+      id: cache-pipenv
+      uses: actions/cache@v1
+      with:
+        path: /opt/hostedtoolcache/Python/
+        key: ${{ runner.os }}-pipenv-${{ hashFiles('**py36.txt') }}
+          
+
+    #- name: Install numpy
+    #  if: steps.cache-pipenv.outputs.cache-hit != 'true'
+    #  run: pip install numpy==1.18.2   pillow==6.2.1  scipy
+      
+
+    - name: Install repo requirements  1
+      if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      run: |
+           pip install -r  py36_min.txt
+
+
+    - name: Install utilmy
+      run:  |
+        pip install -e .
+        python -c "import utilmy"
+
+           
+    - name: Install repo requirements   2
+      if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      run:  |
+        ls .
+        pip install -r  py36.txt
+        #pip install -r install/requirements_fake.txt
+
+
+    - name: test_import
+      run: |
+           python -c "import os, pandas as pd; print(os)"
+           python -c "import utilmy"        
+        
+
+
+    - name: Reset zdocstring branch
+      #continue-on-error: true
+      run:  |
+        git config user.name github-actions
+        git config user.email github-actions@github.com  
+        git fetch    
+        git checkout main
+        git push origin --delete zdocstring || echo 'already Deleted'
+        git checkout -b zdocstring main
+        git branch -a
+        git add -A
+        git commit -am "copy"   || echo 'nothing'
+        git push origin zdocstring  ||  echo 'nothing2'
+        git branch -a
+
+
+    - name: Auto generation of docstring
+      #vcontinue-on-error: true
+      run:  |
+        python  utilmy/docs/docstring.py  generate_docstring --dirin utilmy/  --dirout utilmy/  --overwrite true   --test false
+
+        git add -A || echo 'nothing'
+        git commit -am "docstring" ||   echo 'nothing'
+        git push origin zdocstring  ||  echo 'nothing2'
+
+        echo 'All finished'
+        git branch -a
+
+
+
+    ################################################################
+    - name: Code Syntax Checker flake8
+      continue-on-error: true
+      run:  |
+        pip install --upgrade flake8
+        flake8  --statistics   --count    --max-line-length 140   2>&1 | tee -a docs/flake8_syntax_error.py  
+        
+        
+
+
+    ################################################################
+    - name: test_deeplearning
+      run: python test.py test_deeplearning_torch
+
+
+    - name: test_recsys  
+      continue-on-error: true
+      run:  python test.py   test_recsys
+
+    - name: test_ppandas
+      run: python test.py test_ppandas
+    
+    
+    - name: test_docs_cli 
+      run: python test.py test_docs_cli
+    
+    - name: test_text
+      run: python test.py test_text
+
+    - name: test_distributed
+      run: python test.py test_distributed
+
+    
+
+    - name: test_oos 
+      run: python test.py test_oos
+
+    - name: test_utils
+      run: python test.py test_utils
+      
+    - name: test_tabular
+      run: python test.py test_tabular
+
+    - name: test_adatasets
+      run: python test.py test_adatasets
+
+    - name: test_nnumpy 
+      run: python test.py test_nnumpy
+
+    - name: test_dates
+      run: python test.py test_dates
+
+    - name: test_decorators 
+      run: python test.py test_decorators
+
+    - name: test_utilmy
+      run: python test.py test_utilmy
+
+    - name: test_viz_vizhtml
+      run:  python test.py   test_viz_vizhtml
+
+    - name: test_parallel  
+      run:  python test.py   test_parallel
+
+
+
+
+    # - name: Auto-Commit
+    #   continue-on-error: true
+    #   id: auto_commmit
+    #   uses: stefanzweifel/git-auto-commit-action@v4.8.0
+    #   with:
+    #       # Optional, but recommended
+    #       # Defaults to "Apply automatic changes"
+    #       commit_message: Auto Type Hints
+
+    #       # Optional branch name where commit should be pushed to.
+    #       # Defaults to the current branch.
+    #       # branch: main
+
+    #       # Optional. Used by `git-commit`.
+    #       # See https://git-scm.com/docs/git-commit#_options
+    #       commit_options: '--no-verify --signoff'
+
+    #       # Optional glob pattern of files which should be added to the commit
+    #       file_pattern:  utilmy/**/*.py 
+
+    #       # Optional local file path to the repository
+    #       # Defaults to the root of the repository
+    #       repository: .
+
+

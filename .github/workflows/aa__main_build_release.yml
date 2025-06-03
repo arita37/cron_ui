@@ -1,0 +1,273 @@
+name: AA__main_Build and Publish Package PyPI
+
+###  https://github.com/arita37/awesome-actions#static-analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+
+  push:
+    branches:
+    - main
+
+#  pull_request:
+#    branches:
+#    - main
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    #- uses: actions/checkout@v1
+    #  ref: ${{ github.head_ref }
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
+
+    - name: Set up Python 3.8.*
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8.*
+
+    - name: Install pipenv
+      #uses: dschep/install-pipenv-action@v1
+      run: |
+           pip install pipenv==2022.4.30
+
+
+    - name: Cache pipenv virtualenv
+      id: cache-pipenv
+      uses: actions/cache@v1
+      with:
+        path: /opt/hostedtoolcache/Python/
+        key: ${{ runner.os }}-pipenv-${{ hashFiles('**py36_docfull.txt') }}
+
+
+    #- name: Install numpy
+    #  if: steps.cache-pipenv.outputs.cache-hit != 'true'
+    #  run: pip install numpy==1.18.2   pillow==6.2.1  scipy
+
+
+    - name: Install repo requirements  1
+      if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      run: |
+           export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True  &&  pip install -r  py36_min.txt
+
+
+    - name: Install repo requirements   2
+      if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      run:  |
+        ls .
+        export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True  && pip install -r  py36_docfull.txt
+
+
+    - name: Install utilmy
+      run:  |
+        pip install -e .
+        python -c "import utilmy"
+        pip list
+
+
+
+    - name: test_import
+      run: |
+           python -c "import os, pandas as pd; print(os)"
+           python -c "import utilmy"
+
+
+    - name: Code Syntax Checker flake8
+      continue-on-error: true
+      run:  |
+        pip install --upgrade flake8
+        flake8  --statistics   --count    --max-line-length 140   2>&1 | tee -a docs/flake8_syntax_error.py
+
+
+
+    ########  Runs All test  ######################################
+    - name: test_setup
+      run: |
+          mkdir -p    /home/runner/work/log_tmp/
+          chmod -R 777 .
+
+
+    ################################################################
+    - name: test_import
+      #continue-on-error: true
+      run: |
+          python test.py test_import
+
+
+    - name: test_cli
+      continue-on-error: true
+      run: |
+          python utilmy/cli.py help
+
+
+
+
+    #- name:  sspark/src/util_spark.py
+    #  # continue-on-error: true
+    #  run: |
+    #      python utilmy/sspark/src/util_spark.py test_all
+
+
+
+    - name: test_images
+      continue-on-error: true
+      run: |
+          python test.py test_images
+
+    - name: test_deeplearning
+      continue-on-error: true
+      run: |
+          python test.py test_deeplearning_torch
+
+    - name: test_recsys
+      continue-on-error: true
+      run:  python test.py   test_recsys
+
+    - name: test_ppandas
+      run: python test.py test_ppandas
+
+
+    - name: test_docs_cli
+      run: python test.py test_docs_cli
+
+    - name: test_nlp
+      run: python test.py test_nlp
+
+    - name: test_distributed
+      continue-on-error: true
+      run: ls .
+      # python test.py test_distributed
+
+
+
+    - name: test_oos
+      run: python test.py test_oos
+
+    - name: test_utils
+      run: python test.py test_utils
+
+    - name: test_tabular
+      run: python test.py test_tabular
+
+    - name: test_adatasets
+      run: python test.py test_adatasets
+
+    - name: test_nnumpy
+      run: python test.py test_nnumpy
+
+    - name: test_dates
+      run: python test.py test_dates
+
+    - name: test_decorators
+      run: python test.py test_decorators
+
+    - name: test_utilmy
+      run: python test.py test_utilmy
+
+    #- name: test_viz_vizhtml
+    #  run:  python test.py   test_viz_vizhtml
+
+    - name: test_parallel
+      run:  python test.py   test_parallel
+
+
+
+
+
+
+
+
+################# This Job will upload a Python Package using Twine when a release is created
+  deploy:
+    needs : [build] # List of dependent Jobs
+    if: success()   # check if all previous (needs) dependent jobs were successfull  then only execute
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel twine
+
+    - name: Build and publish
+      #env:
+      #  TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+      #  TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        # echo "$TWINE_USERNAME"
+        python run_pipy.py
+        python setup.py sdist bdist_wheel
+        twine upload dist/*  --username ${{ secrets.PYPI_USERNAME }}     --password ${{ secrets.PYPI_PASSWORD }}  --skip-existing   --repository-url https://upload.pypi.org/legacy/  --verbose
+
+
+
+
+ 
+  ############################################## 
+  create-pull-request:
+    needs : [build] # List of dependent Jobs
+    if: success()   # check if all previous (needs) dependent jobs were successfull  then only execute
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get BASE_BRANCH
+        shell: bash
+        run: |
+          # If you want to figure it out dynamically
+          echo "BASE_BRANCH=$( echo 'zdocs_y23487teg65f6')" >> $GITHUB_ENV
+          
+      - name: Create and Merge PR into zdocs_y23487teg65f6
+        continue-on-error: true
+        id: create_pr
+        uses: actions/github-script@v6
+        env:
+          BASE_BRANCH: ${{ env.BASE_BRANCH }}
+        with:
+          script: |
+            const { repo, owner } = context.repo;
+            const {BASE_BRANCH} = process.env;
+            const result = await github.rest.pulls.create({
+              title: `Auto Merging ${{ github.ref_name }} into ${ BASE_BRANCH }`,
+              owner,
+              repo,
+              head: '${{ github.ref_name }}',
+              base: `${BASE_BRANCH}`,
+              body: [
+                'PR is auto-generated after sucessfull process.,',
+                'Uses : [actions/github-script](https://github.com/actions/github-script).'
+              ].join('\n')
+            });
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: result.data.number,
+              labels: ['Auto-PR']
+            });
+            await github.rest.pulls.merge({
+              owner,
+              repo,
+              pull_number: result.data.number
+            });
+            return result.data.number;
+

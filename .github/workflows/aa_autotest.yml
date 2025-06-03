@@ -1,0 +1,202 @@
+name: aa_autotest
+
+###  https://github.com/arita37/awesome-actions#static-analysis
+
+on:
+  workflow_dispatch:
+    inputs:  
+
+    
+  push:
+    branches:
+    - main
+  
+  #  paths:
+      #- utilmy/**/*
+  #    - "!**/*.md"  ### Exclude when markdown are changed
+  #    - "!utilmy/sspark*/**/*"  ### Exclude 
+  #    - "!utilmy/cloud*/**/*"  ### Exclude 
+
+
+  #schedule:
+  #   - cron:  '0 0 */2 * *'      #### 60mins
+  #   #   #    - cron:  '*/10 * * * *'
+  #   #   - cron:  '* * */2 * *'    
+  
+concurrency: 
+  group: ${{ github.ref }}_main_test
+  cancel-in-progress: true
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    #- uses: actions/checkout@v1
+    #  ref: ${{ github.head_ref }
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
+        
+    - name: Set up Python 3.10.*
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.10.*
+      
+    - name: Install pipenv
+      #uses: dschep/install-pipenv-action@v1
+      run: |
+           pip install pipenv==2022.4.30   
+      
+  
+    - name: Cache pipenv virtualenv
+      id: cache-pipenv
+      uses: actions/cache@v1
+      with:
+        path: /opt/hostedtoolcache/Python/
+        key: ${{ runner.os }}-pipenv-${{ hashFiles('**requirements.txt') }}
+
+      
+
+    - name: Install env
+      continue-on-error: true     
+      run:  |
+        pip install  -r requirements.txt
+        # python -c "import utilmy"
+        # python -c "import os, pandas as pd; print(os)"
+        pip list
+        pip freeze
+        
+    ########  Runs All test  #######################################
+    - name: test_setup
+      run: |
+          mkdir -p    /home/runner/work/log_tmp/
+          chmod -R 777 . 
+
+    ################################################################
+    # - name: test_deeplearning_torch
+    #   # continue-on-error: true 
+    #   run: |
+    #       python test.py test_deeplearning_torch
+
+    - name: cron_ui.py
+      continue-on-error: true 
+      run: |
+          python cron_ui.py &
+
+
+
+
+
+
+
+  # ############################################## 
+  # create-pull-request:
+  #   needs : [build] # List of dependent Jobs
+  #   if: success()   # check if all previous (needs) dependent jobs were successfull  then only execute
+  #   runs-on: ubuntu-latest
+  #   permissions: write-all
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+
+  #     - name: Get BASE_BRANCH
+  #       shell: bash
+  #       run: |
+  #         # If you want to figure it out dynamically
+  #         echo "BASE_BRANCH=$( echo 'main')" >> $GITHUB_ENV
+          
+  #     - name: Create and Merge Pull Request
+  #       continue-on-error: true
+  #       id: create_pr
+  #       uses: actions/github-script@v6
+  #       env:
+  #         BASE_BRANCH: ${{ env.BASE_BRANCH }}
+  #       with:
+  #         script: |
+  #           const { repo, owner } = context.repo;
+  #           const {BASE_BRANCH} = process.env;
+  #           const result = await github.rest.pulls.create({
+  #             title: `Auto PR ${{ github.ref_name }} into ${ BASE_BRANCH }`,
+  #             owner,
+  #             repo,
+  #             head: '${{ github.ref_name }}',
+  #             base: `${BASE_BRANCH}`,
+  #             body: [
+  #               'PR is auto-generated after sucessfull process.,',
+  #               'Uses : [actions/github-script](https://github.com/actions/github-script).'
+  #             ].join('\n')
+  #           });
+  #           await github.rest.issues.addLabels({
+  #             owner,
+  #             repo,
+  #             issue_number: result.data.number,
+  #             labels: ['Auto-PR']
+  #           });
+
+
+# await github.rest.pulls.merge({
+#   owner,
+#   repo,
+#   pull_number: result.data.number
+# });
+# return result.data.number;
+
+
+  ############################################## 
+  create-pull-request2:
+   needs : [build] # List of dependent Jobs
+   if: success()   # check if all previous (needs) dependent jobs were successfull  then only execute
+   runs-on: ubuntu-latest
+   permissions: write-all
+   steps:
+     - name: Checkout
+       uses: actions/checkout@v3
+       with:
+         fetch-depth: 0
+
+     - name: Get BASE_BRANCH
+       shell: bash
+       run: |
+         # If you want to figure it out dynamically
+         echo "BASE_BRANCH=$( echo 'zdocs_y23487teg65f6')" >> $GITHUB_ENV
+
+     - name: Create PR   zdocs_y23487teg65f6
+       continue-on-error: true     
+       id: create_pr
+       uses: actions/github-script@v6
+       env:
+         BASE_BRANCH: ${{ env.BASE_BRANCH }}
+       with:
+         script: |
+           const { repo, owner } = context.repo;
+           const {BASE_BRANCH} = process.env;
+           const result = await github.rest.pulls.create({
+             title: `Auto PR ${{ github.ref_name }} into ${ BASE_BRANCH }`,
+             owner,
+             repo,
+             head: '${{ github.ref_name }}',
+             base: `${BASE_BRANCH}`,
+             body: [
+               'PR is auto-generated after sucessfull process.,',
+               'Uses : [actions/github-script](https://github.com/actions/github-script).'
+             ].join('\n')
+           });
+           await github.rest.issues.addLabels({
+             owner,
+             repo,
+             issue_number: result.data.number,
+             labels: ['Auto-PR']
+           });
+
+
+# await github.rest.pulls.merge({
+# owner,
+# repo,
+# pull_number: result.data.number
+# });
+# return result.data.number;
+
