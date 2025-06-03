@@ -455,9 +455,8 @@ def save_tasks_to_file():
 #######################################################################################
 def task_add_cron(task):
     # from crontab import CronTab # Already imported globally
-
     cron = CronTab(user=True)
-    cmd = task.get('bash_script_path', "")
+    cmd = task.get('bash_script_path', "").replace("./",SCRIPT_DIR +"/")
     taskid = task.get('id', "-1")
     schedule = task.get('cron_expression', "")
 
