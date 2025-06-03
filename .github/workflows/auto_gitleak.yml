@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:  
     
-  push:
-    branches:
-    - 'main'
-    - 'devtorch'
+  # push:
+  #   branches:
+  #   - 'main'
+  #   - 'devtorch'
 
 
 jobs:
