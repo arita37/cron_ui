@@ -10,14 +10,14 @@
 #### Setup and Running
 ```bash
 
-1.  **Clone the repository:**
+1.  
     git clone https://github.com/arita37/cron_ui.git
     cd cron_ui
 
-2.  **Install dependencies:**
+2. 
     pip install -r requirements.txt
 
-3.  **Run the application:**
+3.  ### start
     python cron_ui.py
 
 
