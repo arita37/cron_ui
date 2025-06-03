@@ -1,5 +1,5 @@
 # cron_ui
-A quick but working for local laptop Task Scheduler
+An UI for Task scheduling on local laptop (UI for CRON)
 
 ## Setup and Running
 
