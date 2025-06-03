@@ -58,7 +58,7 @@ jobs:
 
     - name: Cache pipenv virtualenv
       id: cache-pipenv
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: /opt/hostedtoolcache/Python/
         key: ${{ runner.os }}-pipenv-${{ hashFiles('**requirements.txt') }}
