@@ -1,4 +1,3 @@
-from math import log
 import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State, ALL, MATCH, callback_context
@@ -8,7 +7,7 @@ import uuid
 from croniter import croniter
 from crontab import CronTab
 import json
-import os
+import os, traceback
 import time # For a slight delay to help with ID uniqueness if needed
 
 
@@ -437,6 +436,7 @@ def run_task(task):
        run_message = f"Task '{task_name}': {execution_summary}"
        task['status_last_run'] = f"{execution_summary} (Initiated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
        run_color = "success" if "Started" in execution_summary else "warning" # Basic check
+
    except FileNotFoundError:
        run_message = f"Error running task '{task_name}': Script '{script_path}' not found."
        task['status_last_run'] = f"Script not found (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
@@ -450,6 +450,7 @@ def run_task(task):
        task['status_last_run'] = f"Failed to start: {e} (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
        run_color = "danger"
        print(f"Exception in run_task: {e}")
+       print(traceback.format_exc())
 
    save_tasks_to_file() # Persist the updated status_last_run
 
@@ -471,13 +472,13 @@ def date_get_ymdhms(dt=None):
     if dt is None:
         dt = datetime.now()
     
-    # Extract components
-    year = dt.year
-    month = dt.month
-    day = dt.day
-    hour = dt.hour
-    minute = dt.minute
-    second = dt.second
+    # Extract components and format with 2 digits
+    year = str(dt.year)
+    month = f"{dt.month:02d}"
+    day = f"{dt.day:02d}"
+    hour = f"{dt.hour:02d}"
+    minute = f"{dt.minute:02d}"
+    second = f"{dt.second:02d}"
     
     return year, month, day, hour, minute, second
 
@@ -507,10 +508,11 @@ def run_shell_script(script_path):
             raise PermissionError(f"Script not executable and could not be made executable: {script_path}")
 
 
-    #### create some logfile
+    #### create some logfile #############################
     dircurr = os.path.abspath(os.getcwd())
+    print(dircurr)
     year, month, day, hour, minute, second = date_get_ymdhms()
-    dirlog=f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}"
+    dirlog=f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}/hour={hour}"
     logfile=f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
 
     os.makedirs(f"{dirlog}", exist_ok=True)
@@ -518,11 +520,14 @@ def run_shell_script(script_path):
     os.system(f"echo 'date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' >> {logfile}")
     os.system(f"echo '\n\n\n' >> {logfile}")
 
-    cmd = f"{script_path} 2>&1 | tee -a " + logfile
+
+    #### Command to run ################################### {script_path}
+    cmd = f"cd '{dircurr}' 2>&1 | tee -a  '{logfile}'  && echo $(pwd) 2>&1 | tee -a  '{logfile}'  &&  {script_path} 2>&1 | tee -a  '{logfile}' "
     print(f"Running: {cmd}")
 
 
     try:
+
         # Use system default shell, fallback to /binz/sh
         default_shell = os.environ.get('SHELL', '/bin/zsh')
         process = subprocess.Popen(
@@ -532,9 +537,10 @@ def run_shell_script(script_path):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            close_fds=True # Recommended for security and resource management
+            # close_fds=True # Recommended for security and resource management
         )
         
+
 
         # Brief wait to allow process to start and potentially get initial info
         # Note: This does NOT wait for the script to complete.
