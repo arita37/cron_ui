@@ -36,10 +36,6 @@ Then, open your web browser and go to the address provided (usually `http://127.
 
 ```
 
-![image](https://github.com/user-attachments/assets/d668cc79-5df2-40f3-a538-bd9d2e763da6)
-
-
-
 
 
 
