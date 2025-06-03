@@ -422,7 +422,7 @@ def task_remove_cron(task, show=1):
 def run_task(task):
    """Runs the task script and updates its status."""
    script_path = task.get('bash_script_path')
-   task_name = task.get('name', 'Unnamed Task')
+   task_name   = task.get('name', 'Unnamed Task')
    
    print(f"Attempting to run task: {task_name}")
    print(f"Script: {script_path}")
@@ -432,7 +432,7 @@ def run_task(task):
 
    try:
        # run_shell_script now returns a more detailed message
-       execution_summary = run_shell_script(script_path) 
+       execution_summary = run_shell_script(script_path, task) 
        run_message = f"Task '{task_name}': {execution_summary}"
        task['status_last_run'] = f"{execution_summary} (Initiated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
        run_color = "success" if "Started" in execution_summary else "warning" # Basic check
@@ -482,7 +482,7 @@ def date_get_ymdhms(dt=None):
     
     return year, month, day, hour, minute, second
 
-def run_shell_script(script_path):
+def run_shell_script(script_path, task):
     """
     Run a shell script after loading .zshrc.
     Args:
@@ -507,6 +507,7 @@ def run_shell_script(script_path):
             print(f"Could not make script executable {script_path}: {e}")
             raise PermissionError(f"Script not executable and could not be made executable: {script_path}")
 
+    task_str = str(task)
 
     #### create some logfile #############################
     dircurr = os.path.abspath(os.getcwd())
@@ -516,20 +517,21 @@ def run_shell_script(script_path):
     logfile=f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
 
     os.makedirs(f"{dirlog}", exist_ok=True)
-    os.system(f"echo 'script: {script_path}' > {logfile}")
-    os.system(f"echo 'date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' >> {logfile}")
+    os.system(f"echo '## date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' > {logfile}")
+    os.system(f"echo '## script: {script_path}' >> {logfile}")
+    os.system(f"echo '## task: {task_str}' >> {logfile}")
     os.system(f"echo '\n\n\n' >> {logfile}")
+
 
 
     #### Command to run ################################### {script_path}
     cmd = f"cd '{dircurr}' 2>&1 | tee -a  '{logfile}'  && echo $(pwd) 2>&1 | tee -a  '{logfile}'  &&  {script_path} 2>&1 | tee -a  '{logfile}' "
     print(f"Running: {cmd}")
 
-
     try:
-
         # Use system default shell, fallback to /binz/sh
         default_shell = os.environ.get('SHELL', '/bin/zsh')
+        print(f"Using shell: {default_shell}")
         process = subprocess.Popen(
             cmd,
             shell=True,
