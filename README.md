@@ -8,17 +8,17 @@
 ```bash
 
 1.  **Clone the repository:**
-    git clone <repository_url>
+    git clone https://github.com/arita37/cron_ui.git
     cd cron_ui
-
-
 
 2.  **Install dependencies:**
     pip install -r requirements.txt
 
 3.  **Run the application:**
     python cron_ui.py
-    Then, open your web browser and go to the address provided (usually `http://127.0.0.1:9721`).
+
+
+Then, open your web browser and go to the address provided (usually `http://127.0.0.1:9721`).
 
 ```
 
