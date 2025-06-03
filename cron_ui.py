@@ -376,27 +376,27 @@ def task_add_cron(task):
     
     if not schedule: # If cron_expression is empty, don't add to crontab
         print(f"Task '{task.get('name')}' (ID: {taskid}) has no CRON expression. Not adding to system crontab.")
-        cron.write_safe() # Save changes if any (like removals)
+        cron.write() # Save changes if any (like removals)
         return
 
     if len(cmd) < 1: # Basic check for command
         print(f"Invalid command for task ID {taskid}. Not adding to system crontab.")
-        cron.write_safe()
+        cron.write()
         return
 
     try:
         if not croniter.is_valid(schedule):
             print(f"Invalid CRON expression: '{schedule}' for task ID {taskid}. Not adding to system crontab.")
-            cron.write_safe()
+            cron.write()
             return
     except Exception as e:
         print(f"Error validating CRON expression '{schedule}' for task ID {taskid}: {e}. Not adding to system crontab.")
-        cron.write_safe()
+        cron.write()
         return
 
     job = cron.new(command=cmd, comment='cron_ui' + taskid)
     job.setall(schedule)
-    cron.write_safe() # Use write_safe to avoid issues with temp files
+    cron.write() # Use write_safe to avoid issues with temp files
     print(f"Cron job for task ID {taskid} set/updated: {job}")
 
 
@@ -413,7 +413,7 @@ def task_remove_cron(task, show=1):
             print(f"Removed cron job for task ID {taskid}: {job}")
     
     if jobs_removed > 0:
-        cron.write_safe()
+        cron.write()
     elif show:
         print(f"No cron job found with comment 'cron_ui{taskid}' to remove.")
 
