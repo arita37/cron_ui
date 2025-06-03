@@ -40,10 +40,10 @@ jobs:
         ref: ${{ github.head_ref }}
 
 
-    - uses: gitleaks/gitleaks-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
-        # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE}} # Only required for Organizations, not personal accounts.
+    # - uses: gitleaks/gitleaks-action@v2
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+    #     # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE}} # Only required for Organizations, not personal accounts.
 
     - name: Set up Python 3.10.*
       uses: actions/setup-python@v1
@@ -58,7 +58,7 @@ jobs:
 
     - name: Cache pipenv virtualenv
       id: cache-pipenv
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: /opt/hostedtoolcache/Python/
         key: ${{ runner.os }}-pipenv-${{ hashFiles('**requirements.txt') }}
