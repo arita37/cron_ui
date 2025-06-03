@@ -23,6 +23,55 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TASKS_FILE_PATH = os.path.join(SCRIPT_DIR, TASKS_FILE_NAME)
 
 
+#################################################################################
+# Add a function to read script content
+def read_script_content(file_path):
+    """Reads content from a script file path."""
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                return f.read()
+        return ""  # Return empty string if file doesn't exist
+    except Exception as e:
+        print(f"Error reading script file {file_path}: {e}")
+        return f"# Error reading file: {str(e)}"
+
+# Add a function to save script content
+def save_script_content(file_path, content):
+    """Saves content to a script file path."""
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w') as f:
+            f.write(content)
+        return True
+    except Exception as e:
+        print(f"Error saving script file {file_path}: {e}")
+        return False
+
+
+
+# In your layout where you define the task editing form
+# This global definition is noted, but instantiation happens in create_manage_task_layout
+script_content_textarea = dbc.Textarea(
+    id='task-script-content',
+    placeholder="Script content...",
+    style={"height": "300px"},
+)
+
+
+
+
+@app.callback(
+    Output('task-script-content', 'value'),
+    [Input('task-script-input', 'value')],
+    prevent_initial_call=True
+)
+def load_script_content(script_path):
+    if not script_path:
+        return ""
+    return read_script_content(script_path)
+
 
 
 def calculate_next_run(cron_str):
@@ -139,6 +188,12 @@ def create_manage_task_layout(task_info=None, mode='add'):
     initial_cron = task_info['cron_expression'] if task_info else ""
     editing_id = task_info['id'] if task_info and mode == 'edit' else None
 
+    # --- MODIFICATION: Read initial script content ---
+    initial_script_content = ""
+    if initial_script_path: # If there's a script path (e.g., in edit/copy mode)
+        initial_script_content = read_script_content(initial_script_path)
+    # --- END MODIFICATION ---
+
     if mode == 'edit':
         page_title = "Edit Task"
     elif mode == 'copy':
@@ -162,7 +217,23 @@ def create_manage_task_layout(task_info=None, mode='add'):
                 dbc.Label("CRON Expression", html_for="task-cron-input", width=2),
                 dbc.Col(dbc.Input(type="text", id="task-cron-input", value=initial_cron, placeholder="e.g., 0 0 * * * (leave blank if none)"), width=10),
             ], className="mb-3"),
-        ]),
+        
+            # --- MODIFIED SECTION for Script Content Textarea ---
+            # This section was present in your provided code with an incorrect label and missing value.
+            # It's now corrected and integrated.
+            dbc.Row([
+                dbc.Label("Script Content", html_for="task-script-content", width=2), # Corrected label
+                dbc.Col([ # Textarea as a child of the Col
+                    dbc.Textarea(
+                        id='task-script-content',
+                        value=initial_script_content, # Set initial value
+                        placeholder="Enter or edit script content here. Content will be loaded if 'Bash Script Path' is valid and file exists. Changes will be saved to the path.",
+                        style={"height": "300px"},
+                    )
+                ], width=10) # Added width for consistency
+            ], className="mb-3"), # Added className to Row for consistency
+            # --- END MODIFIED SECTION ---
+        ]), # Closing dbc.Form
         html.Div([
             dbc.Button("Save Task", id="save-task-button", color="success", className="me-2"),
             dbc.Button("Cancel", id="cancel-manage-task-button", href="/", color="secondary", outline=True),
@@ -211,11 +282,14 @@ def display_page(pathname, search_query):
     [Input('save-task-button', 'n_clicks')],
     [State('task-name-input', 'value'),
      State('task-script-input', 'value'),
+     State('task-script-content', 'value'),  # State for script content (already present)
      State('task-cron-input', 'value'),
      State('edit-mode-store', 'data')], # Contains editing_id and mode
     prevent_initial_call=True
 )
-def save_task_callback(n_clicks, name, script_path, cron_expression, edit_mode_data):
+# --- MODIFICATION: Added 'script_content' to function parameters ---
+def save_task_callback(n_clicks, name, script_path, script_content, cron_expression, edit_mode_data):
+# --- END MODIFICATION ---
     """Saves a new task or updates an existing task."""
     global tasks_data
     if not n_clicks:
@@ -261,6 +335,14 @@ def save_task_callback(n_clicks, name, script_path, cron_expression, edit_mode_d
         tasks_data.append(new_task)
         alert_message = f"Task '{name}' (ID: {new_task_id}) saved successfully!"
         task_add_cron(new_task)
+
+
+    # Save script content to file (this part was already in your provided code)
+    # Now 'script_content' parameter is correctly passed to this function.
+    if script_content is not None: # script_content is now a defined parameter
+        save_result = save_script_content(script_path, script_content)
+        if not save_result:
+            return dash.no_update, {'message': f'Error saving script to {script_path}. Task not saved/updated.', 'color': 'danger'}
 
         
     save_tasks_to_file() 
@@ -527,6 +609,7 @@ def run_shell_script(script_path, task):
     #### Command to run ################################### {script_path}
     cmd = f"cd '{dircurr}' 2>&1 | tee -a  '{logfile}'  && echo $(pwd) 2>&1 | tee -a  '{logfile}'  &&  {script_path} 2>&1 | tee -a  '{logfile}' "
     print(f"Running: {cmd}")
+
 
     try:
         # Use system default shell, fallback to /binz/sh
