@@ -485,8 +485,8 @@ def run_shell_script(script_path):
     cmd = f"{script_path}"
     
     try:
-        # Use system default shell, fallback to /bin/sh
-        default_shell = os.environ.get('SHELL', '/bin/sh')
+        # Use system default shell, fallback to /binz/sh
+        default_shell = os.environ.get('SHELL', '/bin/zsh')
         process = subprocess.Popen(
             cmd,
             shell=True,
