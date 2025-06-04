@@ -7,18 +7,26 @@
 #### Setup and Running
 ```bash
 
-1.  **Clone the repository:**
-    git clone <repository_url>
-    cd cron_ui
+    1.  **Clone the repository:**
+        git clone <repository_url>
+        cd cron_ui
 
 
+    2.  **Install dependencies:**
+        pip install -r requirements.txt
 
-2.  **Install dependencies:**
-    pip install -r requirements.txt
 
-3.  **Run the application:**
-    python cron_ui.py
-    Then, open your web browser and go to the address provided (usually `http://127.0.0.1:9721`).
+        ### if no config
+    2   cp  tasks.json  ztmp/tasks.json  ##### if needed
+
+
+    3.  **Run the application:**
+        python cron_ui.py
+
+
+        Then, open your web browser and go to the address provided (usually `http://127.0.0.1:9721`).
+
+
 
 ```
 
