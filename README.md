@@ -4,6 +4,9 @@
     Easy to install eas
 
 
+![image](https://github.com/user-attachments/assets/9cba2d68-0cae-4ee0-a5c7-80327b2791a8)
+
+
 #### Setup and Running
 ```bash
 
@@ -31,6 +34,7 @@
 
 
 
+
 ```
 
 
@@ -43,6 +47,8 @@
     *   The application executes scheduled scripts using the system's default shell (determined by the `SHELL` environment variable, typically falling back to `/bin/sh` if not set). Ensure that the scripts are compatible with the default shell environment of the user running the `cron_ui.py` application.
 
 ```
+
+
 
 
 

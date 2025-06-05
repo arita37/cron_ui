@@ -417,6 +417,23 @@ def callback_show_main_page_alert(alert_data):
 
 
 
+#######################################################################################
+# --- Helper Functions ---------------------------------------------------------------
+
+def save_tasks_to_file():
+    global tasks_data
+    try:
+        for task_entry in tasks_data:
+            task_entry.setdefault('status_last_run', 'Not yet run')
+        with open(TASKS_FILE_PATH, 'w') as f:
+            json.dump(tasks_data, f, indent=4)
+        print(f"Tasks saved successfully to {TASKS_FILE_PATH}")
+    except Exception as e:
+        print(f"Error saving tasks to {TASKS_FILE_PATH}: {e}")
+
+
+
+
 
 
 
@@ -678,3 +695,4 @@ if __name__ == '__main__':
     TASKS_FILE_PATH = os.path.join(SCRIPT_DIR, TASKS_FILE_NAME)
 
     app.run_server(debug=True,port=9721)
+
