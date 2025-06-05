@@ -4,9 +4,6 @@
     Easy to install eas
 
 
-![image](https://github.com/user-attachments/assets/9cba2d68-0cae-4ee0-a5c7-80327b2791a8)
-
-
 #### Setup and Running
 ```bash
 
@@ -34,9 +31,7 @@
 
 
 
-
 ```
-
 
 ## Important Notes:
 *   **Permissions:**
@@ -44,13 +39,63 @@
     *   The application requires write access to `tasks.json` in its directory to save task configurations.
 
 *   **Shell for Script Execution:**
-    *   The application executes scheduled scripts using the system's default shell (determined by the `SHELL` environment variable, typically falling back to `/bin/sh` if not set). Ensure that the scripts are compatible with the default shell environment of the user running the `cron_ui.py` application.
+    *   The application executes scheduled scripts using the system's default shell (determined by the `SHELL` environment variable, typically falling back to `/bin/zsh` if not set). Ensure that the scripts are compatible with the default shell environment of the user running the `cron_ui.py` application.
 
 ```
 
 
 
 
+```
+Code
 
 
 
+
+cron_calculate_next_run
+
+tasks_load
+
+
+script_content_textarea
+
+layout_create_main_page
+
+layout_create_manage_task
+
+callback_load_script_content
+
+callback_display_page
+
+callback_save_task
+
+callback_task_handle_actions
+
+callback_show_main_page_alert
+
+save_tasks_to_file
+
+tasks_run
+
+tasks_save_to_file
+
+date_get_ymdhms
+
+run_shell_script
+
+os_get_process_info
+
+os_get_process_usage_subprocess
+
+task_add_cron
+
+task_remove_cron
+
+crontab_get_content
+
+script_read_content
+
+script_save_content
+
+
+```
