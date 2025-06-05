@@ -432,7 +432,7 @@ def tasks_run(task):
    print(f"Script: {script_path}")
 
    run_message = ""
-   run_color = "info"
+   run_color   = "info"
 
    try:
        execution_summary = run_shell_script(script_path, task) 
@@ -440,14 +440,6 @@ def tasks_run(task):
        task['status_last_run'] = f"{execution_summary} (Initiated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
        run_color = "success" if "Started" in execution_summary or "completed quickly" in execution_summary else "warning" 
 
-   except FileNotFoundError:
-       run_message = f"Error running task '{task_name}': Script '{script_path}' not found."
-       task['status_last_run'] = f"Script not found (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
-       run_color = "danger"
-   except PermissionError:
-       run_message = f"Error running task '{task_name}': Permission denied for script '{script_path}'. Make sure it's executable."
-       task['status_last_run'] = f"Permission denied (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
-       run_color = "danger"
    except Exception as e:
        run_message = f"An unexpected error occurred while trying to run task '{task_name}': {e}"
        task['status_last_run'] = f"Failed to start: {e} (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
