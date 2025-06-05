@@ -15,13 +15,12 @@ function date_get_ymdhms() {
   minute1=$(date -jf "%Y-%m-%d" "$date_str" +"%M")
   second1=$(date -jf "%Y-%m-%d" "$date_str" +"%S")
 
-  # Optional: print the results
-  echo "Year: $year1, Month: $month1, Day: $day1, Hour: $hour1, Minute: $minute1, Second: $second1"
+  echo "$year1 $month1 $day1 $hour1 $minute1 $second1"
 }
 
 
-
-date_get_ymdhms
+# Call the function and read the values into local variables
+read year1 month1 day1 hour1 minute1 second1 <<< "$(date_get_ymdhms)"
 
 dirlog="ztmp/log/year=$year1/month=$month1/day=$day1"
 mkdir -p  $dirlog
