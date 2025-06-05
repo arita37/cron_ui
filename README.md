@@ -10,18 +10,30 @@
 #### Setup and Running
 ```bash
 
-1.  
-    git clone https://github.com/arita37/cron_ui.git
-    cd cron_ui
+    1.  **Clone the repository:**
+        git clone <repository_url>
+        cd cron_ui
 
-2. 
-    pip install -r requirements.txt
+        mkdir -p ztmp/scripts
+        mkdir -p ztmp/log
+        mkdir -p ztmp/zackup
+        
 
-3.  ### start
-    python cron_ui.py
+    2.  **Install dependencies:**
+        pip install -r requirements.txt
+
+        ### if no config exist in ztmp
+    3   cp --no-clobber  tasks.json  ztmp/tasks.json  #
 
 
-Then, open your web browser and go to the address provided (usually `http://127.0.0.1:9721`).
+    4.  **Run the application:**
+        python cron_ui.py
+
+
+        Then, open your web browser and go to the address provided (usually `http://127.0.0.1:9721`).
+
+
+
 
 ```
 

@@ -1,80 +1,43 @@
+"""
+
+
+"""
+import uuid, os, traceback, time, json
+from datetime import datetime
+
 import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State, ALL, MATCH, callback_context
 from dash.exceptions import PreventUpdate
-from datetime import datetime
-import uuid
 from croniter import croniter
 from crontab import CronTab # Ensure this is imported at the top level
-import json
-import os, traceback
-import time # For a slight delay to help with ID uniqueness if needed
 
 
-# --- App Initialization and Configuration ---
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA], suppress_callback_exceptions=True)
-app.title = "Task Scheduler"
 
-# --- Global Variables & Constants ---
+
+
+#################################################################################
+# --- Global Variables & Constants ----------------------------------------------
 tasks_data = []
-TASKS_FILE_NAME = "tasks.json"
+TASKS_FILE_NAME = "ztmp/tasks.json"
 # Determine the directory of the currently running script to locate tasks.json
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TASKS_FILE_PATH = os.path.join(SCRIPT_DIR, TASKS_FILE_NAME)
 
 
+
 #################################################################################
-# Add a function to read script content
-def read_script_content(file_path):
-    """Reads content from a script file path."""
-    try:
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                return f.read()
-        return ""  # Return empty string if file doesn't exist
-    except Exception as e:
-        print(f"Error reading script file {file_path}: {e}")
-        return f"# Error reading file: {str(e)}"
-
-# Add a function to save script content
-def save_script_content(file_path, content):
-    """Saves content to a script file path."""
-    try:
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w') as f:
-            f.write(content)
-        return True
-    except Exception as e:
-        print(f"Error saving script file {file_path}: {e}")
-        return False
-
-
-
-# In your layout where you define the task editing form
-# This global definition is noted, but instantiation happens in create_manage_task_layout
-script_content_textarea = dbc.Textarea(
-    id='task-script-content',
-    placeholder="Script content...",
-    style={"height": "300px"},
-)
+# --- App Initialization and Configuration --------------------------------------
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA], suppress_callback_exceptions=True)
+app.title = "Task List"
 
 
 
 
-@app.callback(
-    Output('task-script-content', 'value'),
-    [Input('task-script-input', 'value')],
-    prevent_initial_call=True
-)
-def load_script_content_callback(script_path): # Renamed to avoid conflict with function name
-    if not script_path:
-        return ""
-    return read_script_content(script_path)
 
 
-
-def calculate_next_run(cron_str):
+#################################################################################
+def cron_calculate_next_run(cron_str):
     """Calculates the next run time from a CRON string."""
     if not cron_str:
         return ""
@@ -85,39 +48,31 @@ def calculate_next_run(cron_str):
     except Exception:
         return "Invalid CRON"
 
-def load_tasks():
+def tasks_load():
     """Loads tasks from TASKS_FILE_PATH or initializes with defaults."""
     global tasks_data
     tasks_loaded_from_file = False
-    if os.path.exists(TASKS_FILE_PATH):
-        try:
-            with open(TASKS_FILE_PATH, 'r') as f:
-                if os.path.getsize(TASKS_FILE_PATH) == 0:
-                    print(f"Warning: {TASKS_FILE_PATH} is empty. Loading default tasks.")
-                else:
-                    loaded_data = json.load(f)
-                    if isinstance(loaded_data, list):
-                        tasks_data = loaded_data
-                        for task in tasks_data:
-                            task.setdefault('id', str(uuid.uuid4()))
-                            task.setdefault('name', 'Unnamed Task')
-                            task.setdefault('bash_script_path', '')
-                            task.setdefault('cron_expression', '')
-                            task.setdefault('status_last_run', 'Not yet run') # Added default status
-                            task['next_run_time'] = calculate_next_run(task.get('cron_expression', ''))
-                        print(f"Tasks loaded successfully from {TASKS_FILE_PATH}")
-                        tasks_loaded_from_file = True
-                    else:
-                        print(f"Warning: Data in {TASKS_FILE_PATH} is not a list. Loading default tasks.")
-        except json.JSONDecodeError:
-            print(f"Error: Could not decode JSON from {TASKS_FILE_PATH}. File might be corrupted. Loading default tasks.")
-        except Exception as e:
-            print(f"Error loading tasks from file {TASKS_FILE_PATH}: {e}. Loading default tasks.")
+    try:
+        with open(TASKS_FILE_PATH, 'r') as f:
+                loaded_data = json.load(f)
+        tasks_data = loaded_data
+        for task in tasks_data:
+            task.setdefault('id', str(uuid.uuid4()))
+            task.setdefault('name', 'Unnamed Task')
+            task.setdefault('bash_script_path', '')
+            task.setdefault('cron_expression', '')
+            task.setdefault('status_last_run', 'Not yet run') # Added default status
+            task['next_run_time'] = cron_calculate_next_run(task.get('cron_expression', ''))
+
+        print(f"Tasks loaded successfully from {TASKS_FILE_PATH}")
+        tasks_loaded_from_file = True
+
+    except Exception as e:
+        print(f"Error loading tasks from file {TASKS_FILE_PATH}: {e}. Loading default tasks.")
+
 
     if not tasks_loaded_from_file:
-        if not os.path.exists(TASKS_FILE_PATH):
-             print(f"{TASKS_FILE_PATH} not found. Loading default tasks.")
-        
+        print(f"{TASKS_FILE_PATH} not found. Loading default tasks.")
         default_base_id = datetime.now().strftime('%Y%m%d-%H%M%S')
         sample_tasks = [
             {'id': f"{default_base_id}_1", 'name': 'Daily Backup (Default)', 'bash_script_path': '/opt/scripts/backup.sh', 'cron_expression': '0 2 * * *', 'status_last_run': 'Not yet run'},
@@ -125,30 +80,33 @@ def load_tasks():
             {'id': f"{default_base_id}_3", 'name': 'Manual Task (Default)', 'bash_script_path': '/home/user/manual_script.sh', 'cron_expression': '', 'status_last_run': 'Not yet run'}
         ]
         for task in sample_tasks:
-            task['next_run_time'] = calculate_next_run(task['cron_expression'])
+            task['next_run_time'] = cron_calculate_next_run(task['cron_expression'])
             # 'status_last_run' is already set in the dictionary definition
         tasks_data = sample_tasks
         print("Default tasks loaded.")
-        save_tasks_to_file()
+        tasks_save_to_file()
 
 # --- Initial Data Loading -------------------------------------------------------------------------------
-load_tasks()
+tasks_load()
 
 
-##########################################################################################################
-# --- Helper function to get crontab content ---
-def get_user_crontab_content():
-    """Fetches the current user's crontab content as a string."""
-    try:
-        user_cron = CronTab(user=True)
-        return user_cron.render()
-    except Exception as e:
-        print(f"Error reading user crontab: {e}")
-        return f"# Could not retrieve crontab.\n# Error: {str(e)}"
+
+
 
 ##########################################################################################################
-# --- Page Layouts ---
-def create_main_page_layout():
+# --- Page Layouts ---------------------------------------------------------------------------------------
+
+# In your layout where you define the task editing form
+# This global definition is noted, but instantiation happens in layout_create_manage_task
+script_content_textarea = dbc.Textarea(
+    id='task-script-content',
+    placeholder="Script content...",
+    style={"height": "300px"},
+)
+
+
+
+def layout_create_main_page():
     """Creates the layout for the main page (task list)."""
     global tasks_data
 
@@ -181,7 +139,7 @@ def create_main_page_layout():
                            bordered=True, striped=True, hover=True, responsive=True)
 
     # --- ADDITION: Fetch crontab content ---
-    crontab_content_str = get_user_crontab_content()
+    crontab_content_str = crontab_get_content()
     if not crontab_content_str.strip():
         crontab_content_str = "# No crontab entries found for the current user or crontab is empty."
     # --- END ADDITION ---
@@ -217,7 +175,7 @@ def create_main_page_layout():
     ], fluid=True)
 
 
-def create_manage_task_layout(task_info=None, mode='add'):
+def layout_create_manage_task(task_info=None, mode='add'):
     """Creates the layout for Add/Edit/Copy Task page."""
     initial_name = task_info['name'] if task_info else ""
     initial_script_path = task_info['bash_script_path'] if task_info else ""
@@ -226,7 +184,7 @@ def create_manage_task_layout(task_info=None, mode='add'):
 
     initial_script_content = ""
     if initial_script_path: 
-        initial_script_content = read_script_content(initial_script_path)
+        initial_script_content = script_read_content(initial_script_path)
 
     if mode == 'edit':
         page_title = "Edit Task"
@@ -278,13 +236,26 @@ app.layout = html.Div([
 ])
 
 
+
+
 ##########################################################################################################
 # --- Callbacks -----------------------------------------------------------------------------------------
+@app.callback(
+    Output('task-script-content', 'value'),
+    [Input('task-script-input', 'value')],
+    prevent_initial_call=True
+)
+def callback_load_script_content(script_path): # Renamed to avoid conflict with function name
+    if not script_path:
+        return ""
+    return script_read_content(script_path)
+
+
 @app.callback(
     Output('page-content', 'children'),
     [Input('url', 'pathname'), Input('url', 'search')]
 )
-def display_page(pathname, search_query):
+def callback_display_page(pathname, search_query):
     """Renders page content based on URL."""
     global tasks_data 
     if pathname == '/manage-task': 
@@ -302,8 +273,9 @@ def display_page(pathname, search_query):
                 task_info = next((task for task in tasks_data if task.get('id') == copy_id), None)
                 mode = 'copy' if task_info else 'add' 
         
-        return create_manage_task_layout(task_info=task_info, mode=mode)
-    return create_main_page_layout()
+        return layout_create_manage_task(task_info=task_info, mode=mode)
+    return layout_create_main_page()
+
 
 @app.callback(
     [Output('url', 'pathname', allow_duplicate=True),
@@ -316,7 +288,7 @@ def display_page(pathname, search_query):
      State('edit-mode-store', 'data')], 
     prevent_initial_call=True
 )
-def save_task_callback(n_clicks, name, script_path, script_content, cron_expression, edit_mode_data):
+def callback_save_task(n_clicks, name, script_path, script_content, cron_expression, edit_mode_data):
     global tasks_data
     if not n_clicks:
         raise PreventUpdate
@@ -326,7 +298,7 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
 
     editing_id = edit_mode_data.get('editing_id') if edit_mode_data else None
     
-    next_run = calculate_next_run(cron_expression)
+    next_run = cron_calculate_next_run(cron_expression)
     alert_message = ""
 
     if editing_id: 
@@ -362,11 +334,11 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
         task_add_cron(new_task)
 
     if script_content is not None: 
-        save_result = save_script_content(script_path, script_content)
+        save_result = script_save_content(script_path, script_content)
         if not save_result:
             return dash.no_update, {'message': f'Error saving script to {script_path}. Task not saved/updated.', 'color': 'danger'}
         
-    save_tasks_to_file() 
+    tasks_save_to_file() 
     return '/', {'message': alert_message, 'color': 'success'}
 
 
@@ -380,7 +352,7 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
      Input({'type': 'delete-task', 'index': ALL}, 'n_clicks')],
     prevent_initial_call=True
 )
-def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, delete_n_clicks):
+def callback_task_handle_actions(run_n_clicks, edit_n_clicks, copy_n_clicks, delete_n_clicks):
     global tasks_data
     ctx = callback_context
     if not ctx.triggered or not ctx.triggered_id:
@@ -405,7 +377,7 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
     alert_data = {'message': '', 'color': 'info'}
 
     if action_type == 'run-task':
-        alert_data = run_task(task) 
+        alert_data = tasks_run(task) 
         return '/', '', alert_data 
     
     elif action_type == 'edit-task':
@@ -418,7 +390,7 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
         task_name_deleted = task.get('name', 'Unknown task')
         task_remove_cron(task, show=0) 
         tasks_data = [t for t in tasks_data if t.get('id') != task_id]
-        save_tasks_to_file() 
+        tasks_save_to_file() 
         alert_data = {'message': f"Task '{task_name_deleted}' deleted.", 'color': 'warning'}
         return '/', '', alert_data 
 
@@ -431,10 +403,18 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
      Output('main-page-alert', 'color')],
     [Input('alert-message-store', 'data')]
 )
-def show_main_page_alert(alert_data):
+def callback_show_main_page_alert(alert_data):
+    """
+    Displays an alert on the main page by updating the alert's children, 
+    open state, and color based on the data from 'alert-message-store'.
+
+    Parameters:
+    alert_data (dict): A dictionary containing the alert message and color.
+    """
     if alert_data and alert_data.get('message'):
         return alert_data['message'], True, alert_data['color']
     return "", False, "info"
+
 
 
 #######################################################################################
@@ -452,64 +432,16 @@ def save_tasks_to_file():
         print(f"Error saving tasks to {TASKS_FILE_PATH}: {e}")
 
 
-#######################################################################################
-def task_add_cron(task):
-    # from crontab import CronTab # Already imported globally
-    cron = CronTab(user=True)
-    cmd = task.get('bash_script_path', "").replace("./",SCRIPT_DIR +"/")
-    taskid = task.get('id', "-1")
-    schedule = task.get('cron_expression', "")
-
-    for job in cron.find_comment('cron_ui' + taskid):
-        cron.remove(job)
-    
-    if not schedule: 
-        print(f"Task '{task.get('name')}' (ID: {taskid}) has no CRON expression. Not adding to system crontab.")
-        cron.write() 
-        return
-
-    if len(cmd) < 1: 
-        print(f"Invalid command for task ID {taskid}. Not adding to system crontab.")
-        cron.write()
-        return
-
-    try:
-        if not croniter.is_valid(schedule):
-            print(f"Invalid CRON expression: '{schedule}' for task ID {taskid}. Not adding to system crontab.")
-            cron.write()
-            return
-    except Exception as e:
-        print(f"Error validating CRON expression '{schedule}' for task ID {taskid}: {e}. Not adding to system crontab.")
-        cron.write()
-        return
-
-    job = cron.new(command=cmd, comment='cron_ui' + taskid)
-    job.setall(schedule)
-    cron.write() 
-    print(f"Cron job for task ID {taskid} set/updated: {job}")
 
 
 
-def task_remove_cron(task, show=1):
-    # from crontab import CronTab # Already imported globally
-    cron = CronTab(user=True)
-    taskid = task.get('id')
-    jobs_removed = 0
-    for job in cron.find_comment('cron_ui' + taskid):
-        cron.remove(job)
-        jobs_removed += 1
-        if show:
-            print(f"Removed cron job for task ID {taskid}: {job}")
-    
-    if jobs_removed > 0:
-        cron.write()
-    elif show:
-        print(f"No cron job found with comment 'cron_ui{taskid}' to remove.")
+
 
 
 
 #######################################################################################
-def run_task(task):
+# --- Task Execution Functions -------------------------------------------------------
+def tasks_run(task):
    script_path = task.get('bash_script_path')
    task_name   = task.get('name', 'Unnamed Task')
    
@@ -517,7 +449,7 @@ def run_task(task):
    print(f"Script: {script_path}")
 
    run_message = ""
-   run_color = "info"
+   run_color   = "info"
 
    try:
        execution_summary = run_shell_script(script_path, task) 
@@ -525,25 +457,31 @@ def run_task(task):
        task['status_last_run'] = f"{execution_summary} (Initiated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
        run_color = "success" if "Started" in execution_summary or "completed quickly" in execution_summary else "warning" 
 
-   except FileNotFoundError:
-       run_message = f"Error running task '{task_name}': Script '{script_path}' not found."
-       task['status_last_run'] = f"Script not found (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
-       run_color = "danger"
-   except PermissionError:
-       run_message = f"Error running task '{task_name}': Permission denied for script '{script_path}'. Make sure it's executable."
-       task['status_last_run'] = f"Permission denied (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
-       run_color = "danger"
    except Exception as e:
        run_message = f"An unexpected error occurred while trying to run task '{task_name}': {e}"
        task['status_last_run'] = f"Failed to start: {e} (At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
        run_color = "danger"
-       print(f"Exception in run_task: {e}")
+       print(f"Exception in tasks_run: {e}")
        print(traceback.format_exc())
 
-   save_tasks_to_file() 
+   tasks_save_to_file() 
 
    alert_dict = {'message': run_message, 'color': run_color}
    return alert_dict
+
+
+
+def tasks_save_to_file():
+    global tasks_data
+    try:
+        for task_entry in tasks_data:
+            task_entry.setdefault('status_last_run', 'Not yet run')
+        with open(TASKS_FILE_PATH, 'w') as f:
+            json.dump(tasks_data, f, indent=4)
+        print(f"Tasks saved successfully to {TASKS_FILE_PATH}")
+    except Exception as e:
+        print(f"Error saving tasks to {TASKS_FILE_PATH}: {e}")
+
 
 
 def date_get_ymdhms(dt=None):
@@ -560,28 +498,21 @@ def date_get_ymdhms(dt=None):
     
     return year, month, day, hour, minute, second
 
+
 def run_shell_script(script_path, task):
     import subprocess
     import os    
-    
-    if not os.path.isfile(script_path):
-        raise FileNotFoundError(f"Script not found: {script_path}")
-    
-    if not os.access(script_path, os.X_OK):
-        try:
-            os.chmod(script_path, 0o755) 
-            print(f"Made script executable: {script_path}")
-        except Exception as e:
-            print(f"Could not make script executable {script_path}: {e}")
-            raise PermissionError(f"Script not executable and could not be made executable: {script_path}")
+        
+    os.chmod(script_path, 0o755) 
+    print(f"Made script executable: {script_path}")
 
     task_str = str(task)
 
     dircurr = os.path.abspath(os.getcwd())
     print(dircurr)
     year, month, day, hour, minute, second = date_get_ymdhms()
-    dirlog=f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}/hour={hour}"
-    logfile=f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
+    dirlog = f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}/hour={hour}"
+    logfile= f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
 
     os.makedirs(f"{dirlog}", exist_ok=True)
     os.system(f"echo '## date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' > {logfile}")
@@ -591,6 +522,7 @@ def run_shell_script(script_path, task):
 
     cmd = f"cd '{dircurr}' 2>&1 | tee -a  '{logfile}'  && echo $(pwd) 2>&1 | tee -a  '{logfile}'  &&  {script_path} 2>&1 | tee -a  '{logfile}' "
     print(f"Running: {cmd}")
+
 
     try:
         default_shell = os.environ.get('SHELL', '/bin/zsh')
@@ -654,5 +586,113 @@ def os_get_process_usage_subprocess(pid):
         return f"Failed to get process usage for PID {pid}: {e}"
 
 
+
+########################################################################################
+def task_add_cron(task):
+    # from crontab import CronTab # Already imported globally
+
+    cron = CronTab(user=True)
+    cmd = task.get('bash_script_path', "")
+    taskid = task.get('id', "-1")
+    schedule = task.get('cron_expression', "")
+
+    for job in cron.find_comment('cron_ui' + taskid):
+        cron.remove(job)
+    
+    if not schedule: 
+        print(f"Task '{task.get('name')}' (ID: {taskid}) has no CRON expression. Not adding to system crontab.")
+        cron.write() 
+        return
+
+    if len(cmd) < 1: 
+        print(f"Invalid command for task ID {taskid}. Not adding to system crontab.")
+        cron.write()
+        return
+
+    try:
+        if not croniter.is_valid(schedule):
+            print(f"Invalid CRON expression: '{schedule}' for task ID {taskid}. Not adding to system crontab.")
+            cron.write()
+            return
+    except Exception as e:
+        print(f"Error validating CRON expression '{schedule}' for task ID {taskid}: {e}. Not adding to system crontab.")
+        cron.write()
+        return
+
+    job = cron.new(command=cmd, comment='cron_ui' + taskid)
+    job.setall(schedule)
+    cron.write() 
+    print(f"Cron job for task ID {taskid} set/updated: {job}")
+
+
+
+def task_remove_cron(task, show=1):
+    # from crontab import CronTab # Already imported globally
+    cron = CronTab(user=True)
+    taskid = task.get('id')
+    jobs_removed = 0
+    for job in cron.find_comment('cron_ui' + taskid):
+        cron.remove(job)
+        jobs_removed += 1
+        if show:
+            print(f"Removed cron job for task ID {taskid}: {job}")
+    
+    if jobs_removed > 0:
+        cron.write()
+    elif show:
+        print(f"No cron job found with comment 'cron_ui{taskid}' to remove.")
+
+
+
+def crontab_get_content():
+    """Fetches the current user's crontab content as a string."""
+    try:
+        user_cron = CronTab(user=True)
+        return user_cron.render()
+    except Exception as e:
+        print(f"Error reading user crontab: {e}")
+        return f"# Could not retrieve crontab.\n# Error: {str(e)}"
+
+
+
+#######################################################################################
+def script_read_content(file_path):
+    """Reads content from a script file path."""
+    try:
+        with open(file_path, 'r') as f:
+            return f.read()
+    except Exception as e:
+        print(f"Error reading script file {file_path}: {e}")
+        return ""
+
+
+
+def script_save_content(file_path, content):
+    """Saves content to a script file path."""
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w') as f:
+            f.write(content)
+        return True
+    except Exception as e:
+        print(f"Error saving script file {file_path}: {e}")
+        return False
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
+    TASKS_FILE_NAME = "ztmp/tasks.json"
+    # Determine the directory of the currently running script to locate tasks.json
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    TASKS_FILE_PATH = os.path.join(SCRIPT_DIR, TASKS_FILE_NAME)
+
     app.run_server(debug=True,port=9721)
+
