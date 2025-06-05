@@ -11,16 +11,19 @@
         git clone <repository_url>
         cd cron_ui
 
+        mkdir -p ztmp/scripts
+        mkdir -p ztmp/log
+        mkdir -p ztmp/zackup
+        
 
     2.  **Install dependencies:**
         pip install -r requirements.txt
 
+        ### if no config exist in ztmp
+    3   cp --no-clobber  tasks.json  ztmp/tasks.json  #
 
-        ### if no config
-    2   cp  tasks.json  ztmp/tasks.json  ##### if needed
 
-
-    3.  **Run the application:**
+    4.  **Run the application:**
         python cron_ui.py
 
 
