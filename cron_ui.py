@@ -97,7 +97,7 @@ tasks_load()
 # --- Page Layouts ---------------------------------------------------------------------------------------
 
 # In your layout where you define the task editing form
-# This global definition is noted, but instantiation happens in create_manage_task_layout
+# This global definition is noted, but instantiation happens in layout_create_manage_task
 script_content_textarea = dbc.Textarea(
     id='task-script-content',
     placeholder="Script content...",
@@ -106,7 +106,7 @@ script_content_textarea = dbc.Textarea(
 
 
 
-def create_main_page_layout():
+def layout_create_main_page():
     """Creates the layout for the main page (task list)."""
     global tasks_data
 
@@ -175,7 +175,7 @@ def create_main_page_layout():
     ], fluid=True)
 
 
-def create_manage_task_layout(task_info=None, mode='add'):
+def layout_create_manage_task(task_info=None, mode='add'):
     """Creates the layout for Add/Edit/Copy Task page."""
     initial_name = task_info['name'] if task_info else ""
     initial_script_path = task_info['bash_script_path'] if task_info else ""
@@ -245,7 +245,7 @@ app.layout = html.Div([
     [Input('task-script-input', 'value')],
     prevent_initial_call=True
 )
-def load_script_content_callback(script_path): # Renamed to avoid conflict with function name
+def callback_load_script_content(script_path): # Renamed to avoid conflict with function name
     if not script_path:
         return ""
     return script_read_content(script_path)
@@ -255,7 +255,7 @@ def load_script_content_callback(script_path): # Renamed to avoid conflict with 
     Output('page-content', 'children'),
     [Input('url', 'pathname'), Input('url', 'search')]
 )
-def display_page(pathname, search_query):
+def callback_display_page(pathname, search_query):
     """Renders page content based on URL."""
     global tasks_data 
     if pathname == '/manage-task': 
@@ -273,8 +273,9 @@ def display_page(pathname, search_query):
                 task_info = next((task for task in tasks_data if task.get('id') == copy_id), None)
                 mode = 'copy' if task_info else 'add' 
         
-        return create_manage_task_layout(task_info=task_info, mode=mode)
-    return create_main_page_layout()
+        return layout_create_manage_task(task_info=task_info, mode=mode)
+    return layout_create_main_page()
+
 
 @app.callback(
     [Output('url', 'pathname', allow_duplicate=True),
@@ -287,7 +288,7 @@ def display_page(pathname, search_query):
      State('edit-mode-store', 'data')], 
     prevent_initial_call=True
 )
-def save_task_callback(n_clicks, name, script_path, script_content, cron_expression, edit_mode_data):
+def callback_save_task(n_clicks, name, script_path, script_content, cron_expression, edit_mode_data):
     global tasks_data
     if not n_clicks:
         raise PreventUpdate
@@ -351,7 +352,7 @@ def save_task_callback(n_clicks, name, script_path, script_content, cron_express
      Input({'type': 'delete-task', 'index': ALL}, 'n_clicks')],
     prevent_initial_call=True
 )
-def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, delete_n_clicks):
+def callback_task_handle_actions(run_n_clicks, edit_n_clicks, copy_n_clicks, delete_n_clicks):
     global tasks_data
     ctx = callback_context
     if not ctx.triggered or not ctx.triggered_id:
@@ -402,7 +403,14 @@ def handle_task_actions_callback(run_n_clicks, edit_n_clicks, copy_n_clicks, del
      Output('main-page-alert', 'color')],
     [Input('alert-message-store', 'data')]
 )
-def show_main_page_alert(alert_data):
+def callback_show_main_page_alert(alert_data):
+    """
+    Displays an alert on the main page by updating the alert's children, 
+    open state, and color based on the data from 'alert-message-store'.
+
+    Parameters:
+    alert_data (dict): A dictionary containing the alert message and color.
+    """
     if alert_data and alert_data.get('message'):
         return alert_data['message'], True, alert_data['color']
     return "", False, "info"
