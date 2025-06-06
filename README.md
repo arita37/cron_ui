@@ -4,6 +4,16 @@
     Easy to install eas
 
 
+
+
+
+<img width="1634" alt="image" src="https://github.com/user-attachments/assets/c5d73b0c-788b-48db-bddd-9bf4ab968010" />
+
+
+<img width="1613" alt="image" src="https://github.com/user-attachments/assets/bbea68b4-62e1-4b73-8a87-6a6100e86199" />
+
+
+
 #### Setup and Running
 ```bash
 
