@@ -490,7 +490,7 @@ def tasks_run(task):
        print(f"Exception in tasks_run: {e}")
        print(traceback.format_exc())
 
-   tasks_save_to_file() 
+   # tasks_save_to_file() 
 
    alert_dict = {'message': run_message, 'color': run_color}
    return alert_dict
