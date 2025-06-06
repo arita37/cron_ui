@@ -195,3 +195,4 @@ cython_debug/
 .DS_Store
 .DS_Store
 ztmp/
+cd $HOME/gitdev/
