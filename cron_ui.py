@@ -530,6 +530,10 @@ def run_shell_script(script_path, task):
     import os    
         
     os.chmod(script_path, 0o755) 
+
+    fname = os.path.basename(script_path)
+    fname = fname.split('.')[0]
+
     print(f"Made script executable: {script_path}")
 
     task_str = str(task)
@@ -538,7 +542,7 @@ def run_shell_script(script_path, task):
     print(dircurr)
     year, month, day, hour, minute, second = date_get_ymdhms()
     dirlog = f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}/hour={hour}"
-    logfile= f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
+    logfile= f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}_{fname}.log"
 
     os.makedirs(f"{dirlog}", exist_ok=True)
     os.system(f"echo '## date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' > {logfile}")
@@ -563,30 +567,19 @@ def run_shell_script(script_path, task):
         )
         
         time.sleep(0.5) 
-
         pid = process.pid
-        try:
-            os.kill(pid, 0) 
-            is_running = True
-        except OSError:
-            is_running = False
-        
 
-        if is_running:
-            try:
-                info = os_get_process_usage_subprocess(pid)
-            except Exception as e_info:
-                info = f"Could not get process info: {e_info}"
-            return f"Started '{script_path}' (PID: {pid}). Usage: {info.strip()}"
-        else:
-            stdout, stderr = process.communicate(timeout=2) 
-            if process.returncode == 0:
-                return f"Script '{script_path}' (PID: {pid}) likely completed quickly. Output: {stdout[:100]}"
-            else:
-                return f"Script '{script_path}' (PID: {pid}) may have failed quickly. Error: {stderr[:100]}"
+
+        try:
+            info = os_get_process_usage_subprocess(pid)
+        except Exception as e_info:
+            info = f"Could not get process info: {e_info}"
+
+        msg = f"Started '{script_path}' (PID: {pid}). Usage: {info.strip()}"
+        return msg
 
     except Exception as e:
-        return f"Failed to start script '{os.path.basename(script_path)}': {str(e)}"
+        return f"Failed to start script '{script_path}': {str(e)}"
 
 
 def os_get_process_info(pid):
@@ -601,12 +594,12 @@ def os_get_process_info(pid):
 
 def os_get_process_usage_subprocess(pid):
     import subprocess    
-    cmd = f"ps -p {pid} -o pid,pcpu,pmem,rss,cmd --no-headers"
+    cmd = f"ps -p {pid} -o pid,pcpu,pmem,rss,cmd"
+    print(cmd)
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
-        if result.stdout.strip():
-            return result.stdout.strip()
-        return "Process info not found (possibly completed)."
+        return result.stdout
+
     except Exception as e:
         return f"Failed to get process usage for PID {pid}: {e}"
 
