@@ -546,20 +546,19 @@ def run_shell_script(script_path, task):
         except OSError:
             is_running = False
         
+
         if is_running:
             try:
                 info = os_get_process_usage_subprocess(pid)
-                if not info or f"{pid}" not in info: 
-                    info = "Process completed or info unavailable."
             except Exception as e_info:
                 info = f"Could not get process info: {e_info}"
-            return f"Started '{os.path.basename(script_path)}' (PID: {pid}). Usage: {info.strip()}"
+            return f"Started '{script_path}' (PID: {pid}). Usage: {info.strip()}"
         else:
             stdout, stderr = process.communicate(timeout=2) 
             if process.returncode == 0:
-                return f"Script '{os.path.basename(script_path)}' (PID: {pid}) likely completed quickly. Output: {stdout[:100]}"
+                return f"Script '{script_path}' (PID: {pid}) likely completed quickly. Output: {stdout[:100]}"
             else:
-                return f"Script '{os.path.basename(script_path)}' (PID: {pid}) may have failed quickly. Error: {stderr[:100]}"
+                return f"Script '{script_path}' (PID: {pid}) may have failed quickly. Error: {stderr[:100]}"
 
     except Exception as e:
         return f"Failed to start script '{os.path.basename(script_path)}': {str(e)}"
@@ -657,8 +656,10 @@ def crontab_get_content():
 
 
 #######################################################################################
+
 def script_read_content(file_path):
     """Reads content from a script file path."""
+
     try:
         with open(file_path, 'r') as f:
             return f.read()
@@ -688,7 +689,7 @@ def script_save_content(file_path, content):
 
 
 
-
+#######################################################################################
 if __name__ == '__main__':
     TASKS_FILE_NAME = "ztmp/tasks.json"
     # Determine the directory of the currently running script to locate tasks.json
