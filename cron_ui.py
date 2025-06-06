@@ -233,7 +233,8 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     dcc.Store(id='alert-message-store', data={'message': '', 'color': 'info'}),
     html.Div(id='page-content')
-])
+], style={'fontSize': '11px'}) # You can adjust    
+
 
 
 
