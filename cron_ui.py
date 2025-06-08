@@ -526,15 +526,15 @@ def date_get_ymdhms(dt=None):
 
 
 def run_shell_script(script_path, task):
-    import subprocess
-    import os    
+    import subprocess, os 
         
-    os.chmod(script_path, 0o755) 
+    script_path2 = "".join(script_path.split("&&"))
+
+    os.chmod(script_path2, 0o755) 
+    print(f"Made script executable: {script_path2}")
 
     fname = os.path.basename(script_path)
     fname = fname.split('.')[0]
-
-    print(f"Made script executable: {script_path}")
 
     task_str = str(task)
 
