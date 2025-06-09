@@ -23,7 +23,8 @@ TASKS_FILE_NAME = "ztmp/tasks.json"
 # Determine the directory of the currently running script to locate tasks.json
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TASKS_FILE_PATH = os.path.join(SCRIPT_DIR, TASKS_FILE_NAME)
-
+LOG_DIR_NAME = "ztmp/log" # Added for log directory
+LOG_DIR_PATH = os.path.join(SCRIPT_DIR, LOG_DIR_NAME) # Added for log directory
 
 
 #################################################################################
@@ -34,6 +35,19 @@ app.title = "Task List"
 
 
 
+
+
+#################################################################################
+def cron_calculate_next_run(cron_str):
+    """Calculates the next run time from a CRON string."""
+    if not cron_str:
+        return ""
+    try:
+        now = datetime.now()
+        iter = croniter(cron_str, now)
+        return iter.get_next(datetime).strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        return "Invalid CRON"
 
 
 #################################################################################
@@ -170,6 +184,17 @@ def layout_create_main_page():
                 )
             ]),
             className="mb-4" # Add some margin at the bottom
+        )
+        # --- END ADDITION ---
+        ,
+        # --- ADDITION: Display Log Files ---
+        html.Hr(className="my-4"), # Visual separator
+        dbc.Row(
+            dbc.Col([
+                html.H5("Log Files (ztmp/log)"),
+                html.Div(list_log_files(), id='log-files-display') # Call the new function here
+            ]),
+            className="mb-4"
         )
         # --- END ADDITION ---
     ], fluid=True)
@@ -465,7 +490,7 @@ def tasks_run(task):
        print(f"Exception in tasks_run: {e}")
        print(traceback.format_exc())
 
-   tasks_save_to_file() 
+   # tasks_save_to_file() 
 
    alert_dict = {'message': run_message, 'color': run_color}
    return alert_dict
@@ -501,11 +526,15 @@ def date_get_ymdhms(dt=None):
 
 
 def run_shell_script(script_path, task):
-    import subprocess
-    import os    
+    import subprocess, os 
         
-    os.chmod(script_path, 0o755) 
-    print(f"Made script executable: {script_path}")
+    script_path2 = "".join(script_path.split("&&"))
+
+    os.chmod(script_path2, 0o755) 
+    print(f"Made script executable: {script_path2}")
+
+    fname = os.path.basename(script_path)
+    fname = fname.split('.')[0]
 
     task_str = str(task)
 
@@ -513,7 +542,7 @@ def run_shell_script(script_path, task):
     print(dircurr)
     year, month, day, hour, minute, second = date_get_ymdhms()
     dirlog = f"{dircurr}/ztmp/log/year={year}/month={month}/day={day}/hour={hour}"
-    logfile= f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}.log"
+    logfile= f"{dirlog}/task_{year}{month}{day}_{hour}{minute}{second}_{fname}.log"
 
     os.makedirs(f"{dirlog}", exist_ok=True)
     os.system(f"echo '## date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' > {logfile}")
@@ -538,31 +567,19 @@ def run_shell_script(script_path, task):
         )
         
         time.sleep(0.5) 
-
         pid = process.pid
+
+
         try:
-            os.kill(pid, 0) 
-            is_running = True
-        except OSError:
-            is_running = False
-        
-        if is_running:
-            try:
-                info = os_get_process_usage_subprocess(pid)
-                if not info or f"{pid}" not in info: 
-                    info = "Process completed or info unavailable."
-            except Exception as e_info:
-                info = f"Could not get process info: {e_info}"
-            return f"Started '{os.path.basename(script_path)}' (PID: {pid}). Usage: {info.strip()}"
-        else:
-            stdout, stderr = process.communicate(timeout=2) 
-            if process.returncode == 0:
-                return f"Script '{os.path.basename(script_path)}' (PID: {pid}) likely completed quickly. Output: {stdout[:100]}"
-            else:
-                return f"Script '{os.path.basename(script_path)}' (PID: {pid}) may have failed quickly. Error: {stderr[:100]}"
+            info = os_get_process_usage_subprocess(pid)
+        except Exception as e_info:
+            info = f"Could not get process info: {e_info}"
+
+        msg = f"Started '{script_path}' (PID: {pid}). Usage: {info.strip()}"
+        return msg
 
     except Exception as e:
-        return f"Failed to start script '{os.path.basename(script_path)}': {str(e)}"
+        return f"Failed to start script '{script_path}': {str(e)}"
 
 
 def os_get_process_info(pid):
@@ -577,12 +594,12 @@ def os_get_process_info(pid):
 
 def os_get_process_usage_subprocess(pid):
     import subprocess    
-    cmd = f"ps -p {pid} -o pid,pcpu,pmem,rss,cmd --no-headers"
+    cmd = f"ps -p {pid} -o pid,pcpu,pmem,rss,cmd"
+    print(cmd)
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
-        if result.stdout.strip():
-            return result.stdout.strip()
-        return "Process info not found (possibly completed)."
+        return result.stdout
+
     except Exception as e:
         return f"Failed to get process usage for PID {pid}: {e}"
 
@@ -659,6 +676,7 @@ def crontab_get_content():
 #######################################################################################
 def script_read_content(file_path):
     """Reads content from a script file path."""
+
     try:
         with open(file_path, 'r') as f:
             return f.read()
@@ -681,14 +699,46 @@ def script_save_content(file_path, content):
         return False
 
 
+def list_log_files() -> list:
+    """Lists files in the log directory and returns them as html.A components."""
+    log_files_components = []
+    log_dir_abs = LOG_DIR_PATH
+
+    if not os.path.exists(log_dir_abs):
+        return [html.P(f"Log directory not found: {log_dir_abs}")]
+    if not os.path.isdir(log_dir_abs):
+        return [html.P(f"Log path is not a directory: {log_dir_abs}")]
+
+    try:
+        for root, _, files in os.walk(log_dir_abs):
+            for file_name in files:
+                # Construct a relative path from the SCRIPT_DIR for the link
+                # This makes the link work if the app is served from the script's directory
+                # or if a route is set up to serve files from ztmp/log
+                # For local file URLs, we need to be careful with how they are generated.
+                # A simple relative path might not work directly in all browsers for file:// protocol.
+                # However, for a web app, these would typically be served via HTTP.
+                # Assuming a local context for now, or that these will be served.
+                relative_log_path = os.path.join(LOG_DIR_NAME, os.path.relpath(os.path.join(root, file_name), log_dir_abs))
+                # Ensure forward slashes for URL compatibility, even on Windows for the href
+                href_path = relative_log_path.replace(os.sep, '/')
+
+                fp = os.path.abspath(os.path.join(SCRIPT_DIR, href_path)) 
+                log_files_components.append(html.Li(html.A(href_path, href=f"file://{fp}", )))
+
+        if not log_files_components:
+            return [html.P("No .log files found in the log directory.")]
+
+    except Exception as e:
+        return [html.P(f"Error listing log files: {str(e)}")]
+    return [html.Ul(log_files_components)]
 
 
 
 
 
 
-
-
+#######################################################################################
 if __name__ == '__main__':
     TASKS_FILE_NAME = "ztmp/tasks.json"
     # Determine the directory of the currently running script to locate tasks.json
